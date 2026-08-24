@@ -1,0 +1,5566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+>
+
+<title>Hotel Reservation</title>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+html,
+body{
+    margin:0;
+    padding:0;
+    width:100%;
+    min-height:100%;
+    font-family:Arial,sans-serif;
+    background:var(--tg-theme-bg-color,#f4f6f8);
+    color:var(--tg-theme-text-color,#222);
+}
+
+body{
+    padding:15px;
+}
+
+.container{
+    width:100%;
+    max-width:900px;
+    margin:auto;
+}
+
+h1{
+    text-align:center;
+    margin:5px 0 20px;
+}
+
+.card{
+    background:var(--tg-theme-secondary-bg-color,#fff);
+    padding:15px;
+    border-radius:17px;
+    margin-bottom:13px;
+    box-shadow:0 2px 8px rgba(0,0,0,.07);
+}
+
+button{
+    width:100%;
+    border:0;
+    border-radius:13px;
+    padding:14px;
+    margin-top:9px;
+    font-size:16px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.primary{
+    background:#2481cc;
+    color:white;
+}
+
+.secondary{
+    background:#e9eef3;
+    color:#222;
+}
+
+.submit-button{
+    background:#16a34a;
+    color:white;
+    font-size:18px;
+    padding:16px;
+}
+
+.scan-button{
+    background:#111827;
+    color:white;
+}
+
+.hidden{
+    display:none!important;
+}
+
+label{
+    display:block;
+    font-weight:bold;
+    margin-top:12px;
+    margin-bottom:6px;
+}
+
+input,
+select,
+textarea{
+    width:100%;
+    padding:12px;
+    border-radius:11px;
+    border:1px solid #d1d5db;
+    font-size:16px;
+    background:white;
+}
+
+textarea{
+    min-height:80px;
+    resize:vertical;
+}
+
+.row{
+    display:flex;
+    gap:10px;
+}
+
+.row > div{
+    flex:1;
+}
+
+.small{
+    font-size:13px;
+    color:#6b7280;
+    margin-top:5px;
+}
+
+.status{
+    padding:10px;
+    border-radius:10px;
+    margin-top:10px;
+    display:none;
+}
+
+.success{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.warning{
+    background:#fef3c7;
+    color:#92400e;
+}
+
+.danger{
+    background:#fee2e2;
+    color:#991b1b;
+}
+
+.id-preview{
+    width:100%;
+    max-height:300px;
+    object-fit:contain;
+    border-radius:12px;
+    margin-top:10px;
+    display:none;
+}
+
+/* ============================================================
+   ID / PASSPORT LIVE SCANNER UI — iPhone-style
+============================================================ */
+.scanner-card{
+    overflow:hidden;
+    border-radius:24px;
+    background:#050505;
+    color:#fff;
+    padding:0;
+    box-shadow:0 18px 45px rgba(0,0,0,.24);
+}
+.scanner-frame{
+    position:relative;
+    height:430px;
+    min-height:430px;
+    overflow:hidden;
+    background:#000;
+    border-radius:24px 24px 0 0;
+}
+.scanner-video{
+    width:100%;height:100%;object-fit:cover;display:block;background:#000;
+    position:absolute;inset:0;z-index:1;
+}
+.scanner-canvas{display:none;}
+.scanner-preview{
+    width:100%;height:100%;object-fit:contain;display:none;
+    position:absolute;inset:0;z-index:2;background:#000;
+}
+.scanner-placeholder{display:none;}
+.scanner-frame.live:after{content:"";display:none;}
+.scanner-topbar{
+    position:absolute;top:0;left:0;right:0;z-index:8;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px;
+    background:linear-gradient(to bottom,rgba(0,0,0,.78),rgba(0,0,0,0));
+    pointer-events:none;
+}
+.scanner-topbar .scanner-level{
+    font-size:24px;font-weight:500;letter-spacing:.01em;
+}
+.scanner-topbar .scanner-icon{font-size:22px;line-height:1;opacity:.95;}
+.scanner-close-look{
+    width:36px;height:36px;border-radius:50%;display:grid;place-items:center;
+    font-size:30px;font-weight:300;line-height:1;color:#fff;
+    background:rgba(0,0,0,.22);
+}
+.scanner-mode-row{
+    position:absolute;left:0;right:0;bottom:0;z-index:8;
+    display:flex;justify-content:center;gap:44px;align-items:flex-end;
+    padding:14px 16px 12px;
+    background:linear-gradient(to top,rgba(0,0,0,.9),rgba(0,0,0,0));
+    pointer-events:none;
+}
+.scanner-mode{
+    color:#bdbdbd;font-size:17px;font-weight:600;letter-spacing:.01em;
+    position:relative;padding:8px 0 4px;
+}
+.scanner-mode.active{color:#20a7ff;}
+.scanner-mode.active:before{
+    content:"";position:absolute;left:0;right:0;top:0;height:3px;border-radius:999px;background:#20a7ff;
+}
+.scanner-target{
+    position:absolute;
+    left:9%;right:9%;top:29%;height:42%;
+    z-index:6;border:2px solid rgba(0,169,255,.9);
+    border-radius:8px;box-shadow:0 0 0 1px rgba(0,169,255,.2),0 0 20px rgba(0,169,255,.18);
+    pointer-events:none;transition:all .2s ease;
+}
+.scanner-target:before,.scanner-target:after{
+    content:"";position:absolute;width:34px;height:34px;border-color:#18a9ff;border-style:solid;
+}
+.scanner-target:before{left:-2px;top:-2px;border-width:4px 0 0 4px;border-radius:7px 0 0 0;}
+.scanner-target:after{right:-2px;bottom:-2px;border-width:0 4px 4px 0;border-radius:0 0 7px 0;}
+.scanner-target .corner-tr,.scanner-target .corner-bl{
+    position:absolute;width:34px;height:34px;border-color:#18a9ff;border-style:solid;
+}
+.scanner-target .corner-tr{right:-2px;top:-2px;border-width:4px 4px 0 0;border-radius:0 7px 0 0;}
+.scanner-target .corner-bl{left:-2px;bottom:-2px;border-width:0 0 4px 4px;border-radius:0 0 0 7px;}
+.scanner-line{
+    position:absolute;left:10%;right:10%;top:30%;height:2px;
+    background:linear-gradient(90deg,transparent,#19b7ff 18%,#fff 50%,#19b7ff 82%,transparent);
+    box-shadow:0 0 12px #19b7ff,0 0 26px rgba(25,183,255,.55);
+    z-index:7;animation:scanSweepBlue 2.15s ease-in-out infinite;
+    pointer-events:none;
+}
+@keyframes scanSweepBlue{
+    0%,100%{top:30%;opacity:.65}
+    50%{top:69%;opacity:1}
+}
+.scanner-frame.scanned .scanner-line{top:50%;animation:none;background:#20a7ff;}
+.scanner-frame.scanned .scanner-target{border-color:#22c55e;box-shadow:0 0 0 1px rgba(34,197,94,.2),0 0 22px rgba(34,197,94,.28);}
+.scanner-tracking{
+    display:flex;align-items:center;justify-content:center;gap:9px;
+    min-height:40px;padding:8px 12px 4px;background:#050505;color:#fff;
+    font-size:14px;font-weight:600;
+}
+.tracking-dot{width:9px;height:9px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 0 rgba(34,197,94,.7);animation:pulseScan 1.3s infinite;}
+@keyframes pulseScan{70%{box-shadow:0 0 0 9px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+.scanner-controls{
+    background:#050505;padding:14px 20px 20px;display:flex;justify-content:center;align-items:center;
+}
+.scanner-shutter{
+    width:82px;height:82px;border-radius:50%;border:5px solid #fff;background:#050505;
+    box-shadow:0 0 0 2px rgba(255,255,255,.35),0 4px 14px rgba(0,0,0,.35);
+    display:grid;place-items:center;padding:4px;
+}
+.scanner-shutter:after{content:"";width:64px;height:64px;border-radius:50%;background:#fff;display:block;}
+.scanner-shutter:active{transform:scale(.96);}
+.scanner-success{display:none;margin:10px 14px 14px;padding:13px;border-radius:14px;background:#dcfce7;color:#166534;font-weight:700;}
+.scanner-action{margin-top:0;background:transparent;color:#fff;border:0;box-shadow:none;padding:0;}
+.scanner-hint{padding:4px 16px 14px;text-align:center;background:#050505;color:#a9a9a9;font-size:12px;}
+
+/* ============================================================
+   PDF / DOCUMENT SCANNER CONTROLS
+============================================================ */
+.scanner-result{display:none;background:#050505;padding:14px 16px 18px;color:#fff}
+.scanner-result-title{font-size:16px;font-weight:700;margin-bottom:10px}
+.scanner-result img{width:100%;max-height:310px;object-fit:contain;border-radius:12px;background:#111}
+.scanner-result-actions{display:flex;gap:10px;margin-top:12px}
+.scanner-result-actions button{flex:1;min-height:46px;border-radius:14px;border:1px solid rgba(255,255,255,.18);font-weight:700}
+.scanner-save{background:#fff;color:#111}
+.scanner-pdf{background:#19a7ff;color:#fff}
+.scanner-retake{background:#222;color:#fff}
+.scanner-processing{display:none;margin-top:10px;text-align:center;color:#bfe9ff;font-size:13px}
+.scanner-target.pdf-ready{border-color:#22c55e;box-shadow:0 0 0 1px rgba(34,197,94,.2),0 0 28px rgba(34,197,94,.3)}
+.scanner-frame.result-mode .scanner-topbar,
+.scanner-frame.result-mode .scanner-mode-row,
+.scanner-frame.result-mode .scanner-target,
+.scanner-frame.result-mode .scanner-line{display:none}
+
+/* ============================================================
+   MAIN MENU BUTTONS
+============================================================ */
+
+.menu-button{
+    width:100%;
+    min-height:62px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    text-align:left;
+    padding:15px 17px;
+    margin-top:10px;
+
+    background:linear-gradient(145deg,rgba(255,255,255,.72),rgba(255,255,255,.42));
+    color:#000;
+
+    border:1px solid rgba(255,255,255,.78);
+    border-radius:24px;
+
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 10px 30px rgba(0,0,0,.10);
+    -webkit-backdrop-filter:blur(22px) saturate(165%);
+    backdrop-filter:blur(22px) saturate(165%);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+}
+
+.menu-button:active{
+    transform:scale(.985);
+}
+
+.menu-left{
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.menu-icon{
+    font-size:25px;
+}
+
+.menu-title{
+    font-size:16px;
+    font-weight:800;
+}
+
+.menu-arrow{
+    font-size:25px;
+    color:#64748b;
+}
+
+/* ============================================================
+   FIRST PAGE — TWO MAIN ACTIONS
+============================================================ */
+
+.main-menu-card{
+    padding:14px;
+}
+
+.checkin-menu-button{
+    background:linear-gradient(145deg,rgba(255,255,255,.80),rgba(225,235,255,.48));
+}
+
+.checkout-menu-button{
+    background:linear-gradient(145deg,rgba(255,255,255,.80),rgba(225,245,235,.48));
+}
+
+.menu-button .menu-title,
+.menu-button .small,
+.menu-button .menu-arrow{color:#000;}
+
+.menu-button .menu-icon{
+    width:54px;height:54px;display:grid;place-items:center;border-radius:18px;
+    background:rgba(255,255,255,.48);border:1px solid rgba(255,255,255,.68);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 4px 14px rgba(0,0,0,.08);
+}
+
+/* ============================================================
+   IOS-STYLE ACTION PICKER
+============================================================ */
+
+.picker-menu-card{
+    padding:18px 14px 14px;
+    background:rgba(255,255,255,.70);
+    border:1px solid rgba(255,255,255,.86);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 18px 45px rgba(0,0,0,.10);
+    -webkit-backdrop-filter:blur(30px) saturate(150%);
+    backdrop-filter:blur(30px) saturate(150%);
+}
+
+.main-action-picker{
+    position:relative;
+    height:330px;
+    overflow:hidden;
+    border-radius:28px;
+    background:rgba(255,255,255,.52);
+    border:1px solid rgba(255,255,255,.80);
+    -webkit-backdrop-filter:blur(28px) saturate(145%);
+    backdrop-filter:blur(28px) saturate(145%);
+    touch-action:none;
+    user-select:none;
+    outline:none;
+}
+
+.main-action-picker::before,
+.main-action-picker::after{
+    content:"";
+    position:absolute;
+    left:0;right:0;
+    height:88px;
+    z-index:5;
+    pointer-events:none;
+}
+
+.main-action-picker::before{
+    top:0;
+    background:linear-gradient(to bottom,rgba(255,255,255,.92),rgba(255,255,255,0));
+}
+
+.main-action-picker::after{
+    bottom:0;
+    background:linear-gradient(to top,rgba(255,255,255,.92),rgba(255,255,255,0));
+}
+
+.picker-action{
+    position:absolute;
+    left:50%;
+    width:calc(100% - 34px);
+    min-height:76px;
+    transform:translateX(-50%);
+    border:1px solid rgba(255,255,255,.88);
+    border-radius:24px;
+    color:#000;
+    background:rgba(255,255,255,.74);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 12px 30px rgba(0,0,0,.10);
+    -webkit-backdrop-filter:blur(20px) saturate(150%);
+    backdrop-filter:blur(20px) saturate(150%);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+    transition:top .38s cubic-bezier(.22,.75,.2,1), opacity .30s ease, transform .38s cubic-bezier(.22,.75,.2,1), filter .30s ease, scale .30s ease;
+}
+
+.picker-action-selected{
+    top:50%;
+    transform:translate(-50%,-50%) scale(1);
+    min-height:92px;
+    z-index:3;
+    opacity:1;
+    filter:none;
+}
+
+.picker-action-prev,
+.picker-action-next{
+    z-index:2;
+    opacity:.34;
+    filter:blur(5px);
+    scale:.86;
+    pointer-events:auto;
+}
+
+.picker-action-prev{ top:5%; }
+.picker-action-next{ top:95%; transform:translate(-50%,-100%) scale(.86); }
+
+.picker-action:active{
+    transform:translate(-50%,-50%) scale(.985);
+}
+
+.picker-action-prev:active{ transform:translate(-50%,0) scale(.84); }
+.picker-action-next:active{ transform:translate(-50%,-100%) scale(.84); }
+
+.picker-content{
+    display:flex;
+    align-items:center;
+    gap:13px;
+    padding:12px 15px;
+    text-align:left;
+}
+
+.picker-icon{
+    flex:0 0 54px;
+    width:54px;height:54px;
+    display:grid;place-items:center;
+    border-radius:18px;
+    background:rgba(255,255,255,.68);
+    border:1px solid rgba(255,255,255,.82);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 5px 16px rgba(0,0,0,.08);
+    font-size:25px;
+}
+
+.picker-title{
+    font-size:18px;
+    font-weight:850;
+    color:#000;
+}
+
+.picker-subtitle{
+    margin-top:4px;
+    font-size:13px;
+    line-height:1.35;
+    color:#111;
+    opacity:.68;
+}
+
+.picker-hint{
+    position:absolute;
+    left:0;right:0;
+    bottom:15px;
+    z-index:6;
+    text-align:center;
+    font-size:11px;
+    font-weight:600;
+    color:#000;
+    opacity:.48;
+    pointer-events:none;
+}
+
+.picker-checkout-button{
+    margin-top:14px;
+}
+
+@media (prefers-reduced-motion: reduce){
+    .picker-action{transition:none;}
+}
+
+.checkin-step-card{
+    margin:0;
+    padding:24px;
+    background:rgba(255,255,255,.84);
+    border:1px solid rgba(255,255,255,.8);
+    box-shadow:0 10px 35px rgba(0,0,0,.08);
+}
+
+.checkin-step-label{
+    font-size:12px;
+    font-weight:800;
+    letter-spacing:.08em;
+    color:#6b7280;
+    margin-bottom:7px;
+}
+
+.checkin-step-title{
+    margin:0;
+    color:#000;
+    font-size:26px;
+}
+
+.checkin-step-subtitle{
+    color:#4b5563;
+    margin-top:7px;
+    margin-bottom:24px;
+}
+
+.checkin-step-card label{
+    color:#000;
+    font-size:15px;
+}
+
+.checkin-step-card input,
+.checkin-step-card select{
+    min-height:56px;
+    background:rgba(255,255,255,.95);
+    color:#000;
+    border:1px solid rgba(0,0,0,.12);
+    border-radius:16px;
+}
+
+.checkin-next-hint{
+    margin-top:24px;
+    padding:14px 16px;
+    border-radius:15px;
+    background:rgba(0,0,0,.05);
+    color:#555;
+    font-size:13px;
+    line-height:1.5;
+}
+
+/* ============================================================
+   IOS CONTROL CENTER / DRAGGABLE GLASS SHEET
+============================================================ */
+
+.fullscreen-overlay{
+    position:fixed;
+    inset:0;
+    z-index:99999;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding:0;
+    background:rgba(0,0,0,.10);
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    -webkit-backdrop-filter:blur(0) saturate(100%);
+    backdrop-filter:blur(0) saturate(100%);
+    transition:opacity .28s ease,visibility .28s ease,backdrop-filter .28s ease,-webkit-backdrop-filter .28s ease;
+}
+
+.fullscreen-overlay.open{
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
+    -webkit-backdrop-filter:blur(24px) saturate(165%);
+    backdrop-filter:blur(24px) saturate(165%);
+}
+
+.fullscreen-sheet{
+    position:relative;
+    width:calc(100vw - 12px);
+    height:calc(100dvh - 12px);
+    max-width:none;
+    max-height:none;
+    margin:0 6px 6px;
+    padding:12px 22px calc(30px + env(safe-area-inset-bottom));
+    overflow-y:auto;
+    overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    touch-action:pan-y;
+
+    background:
+        linear-gradient(145deg,
+            rgba(255,255,255,.62) 0%,
+            rgba(245,248,255,.43) 42%,
+            rgba(220,230,245,.50) 100%);
+    border:1px solid rgba(255,255,255,.82);
+    border-radius:34px 34px 30px 30px;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.95),
+        inset 0 -1px 0 rgba(255,255,255,.30),
+        0 -8px 30px rgba(0,0,0,.12),
+        0 25px 70px rgba(0,0,0,.22);
+    -webkit-backdrop-filter:blur(40px) saturate(185%);
+    backdrop-filter:blur(40px) saturate(185%);
+
+    transform:translate3d(0,8dvh,0);
+    opacity:0;
+    transition:transform .48s cubic-bezier(.22,1,.36,1),opacity .25s ease;
+    will-change:transform;
+}
+
+.fullscreen-overlay.open .fullscreen-sheet{
+    transform:translate3d(0,0,0);
+    opacity:1;
+}
+
+.fullscreen-sheet.dragging{
+    transition:none !important;
+}
+
+.fullscreen-sheet::before{
+    content:"";
+    position:absolute;
+    left:28px;
+    right:28px;
+    top:0;
+    height:1px;
+    border-radius:999px;
+    background:rgba(255,255,255,.98);
+    pointer-events:none;
+}
+
+.fullscreen-sheet::after{
+    content:"";
+    position:absolute;
+    width:340px;
+    height:340px;
+    top:-150px;
+    right:-90px;
+    border-radius:50%;
+    background:rgba(255,255,255,.24);
+    filter:blur(44px);
+    pointer-events:none;
+}
+
+.sheet-handle{
+    position:sticky;
+    top:0;
+    z-index:20;
+    width:52px;
+    height:6px;
+    margin:0 auto 12px;
+    border-radius:999px;
+    background:rgba(0,0,0,.20);
+    box-shadow:0 1px 2px rgba(255,255,255,.7),inset 0 1px 0 rgba(255,255,255,.35);
+    cursor:grab;
+    touch-action:none;
+}
+
+.sheet-handle:active{cursor:grabbing;}
+
+.sheet-header{
+    position:sticky;
+    top:18px;
+    z-index:15;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    min-height:68px;
+    margin:0 -22px 20px;
+    padding:12px 18px 12px 22px;
+    background:rgba(245,248,252,.42);
+    border-bottom:1px solid rgba(255,255,255,.35);
+    -webkit-backdrop-filter:blur(24px) saturate(170%);
+    backdrop-filter:blur(24px) saturate(170%);
+}
+
+.sheet-title{
+    margin:0;
+    flex:1;
+    min-width:0;
+    color:#000 !important;
+    text-shadow:none !important;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif;
+    font-size:28px;
+    line-height:1.12;
+    font-weight:750;
+    letter-spacing:-.55px;
+}
+
+.sheet-close{
+    flex:0 0 auto;
+    width:52px;
+    height:52px;
+    padding:0;
+    margin:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid rgba(255,255,255,.65);
+    border-radius:50%;
+    background:rgba(255,255,255,.55);
+    color:#000 !important;
+    text-shadow:none !important;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+    font-size:32px;
+    font-weight:400;
+    line-height:1;
+    -webkit-backdrop-filter:blur(18px) saturate(170%);
+    backdrop-filter:blur(18px) saturate(170%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.82),0 3px 12px rgba(0,0,0,.12);
+    transition:transform .15s ease,background .15s ease;
+}
+
+.sheet-close:active{
+    transform:scale(.88);
+    background:rgba(255,255,255,.78);
+}
+
+.sheet-back{
+    width:auto;
+    min-height:44px;
+    margin:0 0 18px;
+    padding:9px 16px;
+    border:1px solid rgba(255,255,255,.56);
+    border-radius:999px;
+    background:rgba(255,255,255,.42);
+    color:#000 !important;
+    text-shadow:none !important;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+    font-size:16px;
+    font-weight:650;
+    -webkit-backdrop-filter:blur(16px) saturate(170%);
+    backdrop-filter:blur(16px) saturate(170%);
+}
+
+.sheet-back:active{transform:scale(.96);}
+
+.fullscreen-sheet .card,
+.fullscreen-sheet .room-type-button,
+.fullscreen-sheet .room-detail-card{
+    background:rgba(255,255,255,.42);
+    color:#000 !important;
+    border:1px solid rgba(255,255,255,.62);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.62),0 8px 24px rgba(0,0,0,.10);
+    -webkit-backdrop-filter:blur(24px) saturate(165%);
+    backdrop-filter:blur(24px) saturate(165%);
+}
+
+.fullscreen-sheet .room-type-button{
+    min-height:78px;
+    border-radius:22px;
+    padding:18px 20px;
+    text-align:left;
+    transition:transform .15s ease,background .15s ease;
+}
+
+.fullscreen-sheet .room-type-button:active{
+    transform:scale(.985);
+    background:rgba(255,255,255,.58);
+}
+
+.fullscreen-sheet .room-type-name,
+.fullscreen-sheet .room-detail-title,
+.fullscreen-sheet strong,
+.fullscreen-sheet label,
+.fullscreen-sheet h1,
+.fullscreen-sheet h2,
+.fullscreen-sheet h3,
+.fullscreen-sheet p,
+.fullscreen-sheet span,
+.fullscreen-sheet div{
+    color:#000;
+    text-shadow:none;
+}
+
+.fullscreen-sheet .room-type-info,
+.fullscreen-sheet .small,
+.fullscreen-sheet .detail-row{
+    color:rgba(0,0,0,.72);
+}
+
+.fullscreen-sheet .room-type-arrow{color:#000;}
+.fullscreen-sheet .detail-row{border-bottom-color:rgba(0,0,0,.12);}
+
+.fullscreen-sheet input,
+.fullscreen-sheet select,
+.fullscreen-sheet textarea{
+    min-height:52px;
+    background:rgba(255,255,255,.62);
+    color:#000;
+    border:1px solid rgba(255,255,255,.70);
+    border-radius:16px;
+    -webkit-appearance:none;
+    appearance:none;
+    -webkit-backdrop-filter:blur(16px);
+    backdrop-filter:blur(16px);
+}
+
+.fullscreen-sheet input::placeholder,
+.fullscreen-sheet textarea::placeholder{color:rgba(0,0,0,.48);}
+.fullscreen-sheet button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+
+@media(max-width:680px){
+    .fullscreen-sheet{
+        width:calc(100vw - 8px);
+        height:calc(100dvh - 8px);
+        margin:0 4px 4px;
+        border-radius:34px 34px 28px 28px;
+        padding:10px 18px calc(26px + env(safe-area-inset-bottom));
+    }
+    .sheet-header{margin-left:-18px;margin-right:-18px;padding-left:18px;}
+    .sheet-title{font-size:25px;}
+}
+
+@media(max-width:420px){
+    .fullscreen-sheet{width:calc(100vw - 6px);height:calc(100dvh - 6px);margin-bottom:3px;}
+}
+
+@media(prefers-reduced-motion:reduce){
+    .fullscreen-overlay,.fullscreen-sheet,.sheet-close{transition:none !important;}
+}
+
+/* ============================================================
+   RESERVATION ROOM-SELECTION FLOW
+============================================================ */
+.reservation-flow-steps{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    flex-wrap:wrap;
+    margin:0 0 14px;
+    padding:10px 12px;
+    border:1px solid rgba(0,0,0,.08);
+    border-radius:14px;
+    background:rgba(248,250,252,.9);
+}
+.reservation-flow-step{
+    font-size:11px;
+    font-weight:800;
+    color:#6b7280;
+}
+.reservation-flow-step.active{
+    color:#111827;
+}
+.reservation-flow-step.done{
+    color:#16a34a;
+}
+.reservation-flow-arrow{
+    color:#9ca3af;
+    font-weight:800;
+}
+.room-price-step-hint{
+    margin:12px 0 8px;
+    padding:10px 12px;
+    border-radius:12px;
+    background:#f8fafc;
+    color:#4b5563;
+    font-size:13px;
+}
+
+/* ============================================================
+   ROOM TYPE BUTTONS
+============================================================ */
+
+.room-type-list{
+
+    display:grid;
+
+    gap:10px;
+}
+
+.room-type-button{
+
+    width:100%;
+
+    min-height:82px;
+
+    margin:0;
+
+    padding:14px;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+    text-align:left;
+
+    background:#fff;
+
+    border:1px solid #e5e7eb;
+
+    color:#222;
+
+    border-radius:17px;
+
+    box-shadow:0 2px 8px rgba(0,0,0,.06);
+}
+
+.room-type-button:active{
+
+    transform:scale(.985);
+}
+
+.room-type-name{
+
+    font-size:17px;
+
+    font-weight:800;
+}
+
+.room-type-info{
+
+    margin-top:5px;
+
+    color:#6b7280;
+
+    font-size:13px;
+}
+
+.room-type-arrow{
+
+    font-size:25px;
+
+    color:#64748b;
+}
+
+/* ============================================================
+   ROOM NUMBERS
+============================================================ */
+
+.room-number-grid{
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(4,1fr);
+
+    gap:9px;
+}
+
+.room-number-button{
+
+    min-height:70px;
+
+    margin:0;
+
+    padding:7px 3px;
+
+    border-radius:14px;
+
+    display:flex;
+
+    flex-direction:column;
+
+    align-items:center;
+
+    justify-content:center;
+
+    font-size:15px;
+
+    font-weight:800;
+
+    border:2px solid #22c55e;
+
+    background:#ecfdf5;
+
+    color:#166534;
+}
+
+.room-number-button:active{
+
+    transform:scale(.96);
+}
+
+.room-number-button.booked{
+
+    border-color:#ef4444;
+
+    background:#fee2e2;
+
+    color:#991b1b;
+}
+
+.room-number-button.reserved{
+
+    border-color:#f59e0b;
+
+    background:#fffbeb;
+
+    color:#92400e;
+}
+
+.room-number-button.selected{
+
+    border-color:#2481cc;
+
+    outline:
+        4px solid rgba(36,129,204,.20);
+}
+
+.room-status-text{
+
+    font-size:9px;
+
+    margin-top:4px;
+
+    letter-spacing:.2px;
+}
+
+
+.room-type-mini{
+    font-size:10px;
+    margin-top:3px;
+    font-weight:600;
+    opacity:.78;
+}
+
+.all-room-button{
+    background:rgba(36,129,204,.10);
+    border-color:rgba(36,129,204,.28);
+}
+
+/* Floor headings inside the All Room section */
+.all-room-floor-section{
+    margin-top:18px;
+}
+
+.all-room-floor-section:first-of-type{
+    margin-top:4px;
+}
+
+.all-room-floor-title{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin:0 2px 9px;
+    padding:11px 14px;
+    border-radius:15px;
+    background:rgba(255,255,255,.58);
+    border:1px solid rgba(255,255,255,.72);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.75),0 5px 16px rgba(0,0,0,.06);
+    color:#000;
+    font-size:18px;
+    font-weight:850;
+}
+
+.all-room-floor-title small{
+    font-size:12px;
+    font-weight:650;
+    color:rgba(0,0,0,.55);
+}
+
+/* ============================================================
+   ROOM DETAIL
+============================================================ */
+
+.room-detail-card{
+
+    margin-top:17px;
+
+    padding:17px;
+
+    background:#fff;
+
+    border-radius:18px;
+
+    border:1px solid #e5e7eb;
+
+    box-shadow:0 3px 12px rgba(0,0,0,.07);
+}
+
+.room-detail-title{
+
+    font-size:22px;
+
+    font-weight:800;
+
+    margin-bottom:12px;
+}
+
+.detail-row{
+
+    padding:10px 0;
+
+    border-bottom:1px solid #f1f5f9;
+
+    font-size:15px;
+
+    line-height:1.4;
+}
+
+.detail-row:last-child{
+
+    border-bottom:0;
+}
+
+.available-box{
+
+    padding:12px;
+
+    border-radius:12px;
+
+    background:#dcfce7;
+
+    color:#166534;
+
+    font-weight:bold;
+
+    margin-bottom:12px;
+}
+
+.booked-box{
+
+    padding:12px;
+
+    border-radius:12px;
+
+    background:#fee2e2;
+
+    color:#991b1b;
+
+    font-weight:bold;
+
+    margin-bottom:12px;
+}
+
+.reserved-box{
+
+    padding:12px;
+
+    border-radius:12px;
+
+    background:#fef3c7;
+
+    color:#92400e;
+
+    font-weight:bold;
+
+    margin-bottom:12px;
+}
+
+.select-room-button{
+
+    background:#16a34a;
+
+    color:white;
+
+    margin-top:15px;
+}
+
+/* ============================================================
+   RESERVATION SUB-MENU
+============================================================ */
+
+.reservation-menu-card{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    padding:4px 0;
+}
+
+.reservation-menu-button{
+    width:100%;
+    min-height:76px;
+    display:flex;
+    align-items:center;
+    gap:13px;
+    margin:0;
+    padding:13px 16px;
+    text-align:left;
+    color:#000;
+    background:rgba(255,255,255,.78);
+    border:1px solid rgba(255,255,255,.9);
+    border-radius:22px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 8px 24px rgba(0,0,0,.08);
+    -webkit-backdrop-filter:blur(20px) saturate(150%);
+    backdrop-filter:blur(20px) saturate(150%);
+}
+
+.reservation-menu-button:active{
+    transform:scale(.985);
+}
+
+.reservation-menu-icon{
+    width:48px;
+    height:48px;
+    flex:0 0 48px;
+    display:grid;
+    place-items:center;
+    border-radius:16px;
+    background:rgba(255,255,255,.72);
+    font-size:23px;
+}
+
+.reservation-menu-text{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.reservation-menu-text strong{
+    font-size:17px;
+    color:#000;
+}
+
+.reservation-menu-text small{
+    font-size:13px;
+    font-weight:500;
+    color:#555;
+}
+
+.reservation-menu-arrow{
+    font-size:28px;
+    color:#000;
+}
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+
+@media(max-width:420px){
+
+    .room-number-grid{
+
+        grid-template-columns:
+            repeat(3,1fr);
+    }
+
+}
+
+</style>
+
+
+<style>
+.native-scan-button{width:100%;min-height:58px;border:0;border-radius:18px;background:#007aff;color:#fff;font-size:18px;font-weight:800;box-shadow:0 6px 18px rgba(0,122,255,.25);margin-bottom:10px;cursor:pointer;}
+.native-scan-button:active{transform:scale(.985);}
+.scanner-native-note{font-size:12px;line-height:1.4;color:#667085;text-align:center;margin:0 4px 14px;}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🏨 Hotel Reservation</h1>
+
+<!-- ============================================================
+     MAIN MENU
+============================================================ -->
+
+<div class="card main-menu-card picker-menu-card">
+
+    <div
+        id="mainActionPicker"
+        class="main-action-picker"
+        tabindex="0"
+        aria-label="Choose an action"
+    >
+        <button
+            id="pickerPrev"
+            class="picker-action picker-action-prev"
+            type="button"
+            onclick="pickerMove(-1)"
+        ></button>
+
+        <button
+            id="pickerSelected"
+            class="picker-action picker-action-selected"
+            type="button"
+            onclick="openSelectedMainAction()"
+        ></button>
+
+        <button
+            id="pickerNext"
+            class="picker-action picker-action-next"
+            type="button"
+            onclick="pickerMove(1)"
+        ></button>
+
+        <div class="picker-hint">
+            Swipe up or down to switch • Tap the center to open
+        </div>
+    </div>
+
+</div>
+
+
+<!-- ============================================================
+     HIDDEN FORM DATA
+     The actual fields remain on the page so existing JS works.
+============================================================ -->
+
+<div class="hidden">
+
+    <!-- GUEST -->
+
+    <select id="guestType">
+        <option value="walk in">Walk In</option>
+        <option value="booking">Booking</option>
+        <option value="tuk tuk">Tuk Tuk</option>
+        <option value="taxi">Taxi</option>
+    </select>
+
+    <input id="pax" type="number" min="1" value="1">
+    <input id="adult" type="number" min="0" value="1">
+    <input id="children" type="number" min="0" value="0">
+
+
+    <!-- ROOM SELECTION -->
+
+    <div id="roomSelection"></div>
+
+    <span id="nightPrice">$0.00</span>
+    <span id="totalPrice">$0.00">
+
+
+    <!-- STAY -->
+
+    <input id="checkin" type="date">
+
+    <input
+        id="nights"
+        type="number"
+        min="1"
+        value="1"
+    >
+
+    <input
+        id="checkout"
+        type="date"
+        readonly
+    >
+
+    <div id="staySummary"></div>
+
+
+    <!-- PAYMENT -->
+
+    <select id="paymentStatus">
+
+        <option value="រួចរាល់">
+            រួចរាល់
+        </option>
+
+        <option value="មិនទាន់បង់">
+            មិនទាន់បង់
+        </option>
+
+        <option value="partial">
+            Partial
+        </option>
+
+    </select>
+
+
+    <select id="paymentMethod">
+
+        <option value="AC">
+            AC
+        </option>
+
+        <option value="Cash">
+            Cash
+        </option>
+
+        <option value="Card">
+            Card
+        </option>
+
+        <option value="Bank">
+            Bank
+        </option>
+
+    </select>
+
+
+    <!-- CONTACT -->
+
+    <input
+        id="phone"
+        type="tel"
+        placeholder="0968903269"
+    >
+
+    <textarea
+        id="note"
+        placeholder="Additional note..."
+    ></textarea>
+
+
+    <!-- ID -->
+
+    <input
+        id="idPhoto"
+        type="file"
+        accept="image/*"
+        capture="environment"
+    >
+
+    <img id="idPreview">
+
+    <div id="ocrStatus"></div>
+
+    <select id="documentType">
+
+        <option value="">
+            Not selected
+        </option>
+
+        <option value="Passport">
+            Passport
+        </option>
+
+        <option value="ID Card">
+            ID Card
+        </option>
+
+        <option value="Other">
+            Other
+        </option>
+
+    </select>
+
+    <input
+        id="idName"
+        type="text"
+        placeholder="Guest full name"
+    >
+
+    <input
+        id="documentNumber"
+        type="text"
+        placeholder="Document number"
+    >
+
+    <input
+        id="nationality"
+        type="text"
+        placeholder="Nationality"
+    >
+
+    <input
+        id="dateOfBirth"
+        type="text"
+        placeholder="DD/MM/YYYY"
+    >
+
+    <input
+        id="expiryDate"
+        type="text"
+        placeholder="DD/MM/YYYY"
+    >
+
+</div>
+
+
+</div>
+
+
+<!-- ============================================================
+     FULL SCREEN PANEL
+============================================================ -->
+
+<div
+    id="fullscreenOverlay"
+    class="fullscreen-overlay"
+    onclick="overlayClicked(event)"
+>
+
+    <div
+        id="fullscreenSheet"
+        class="fullscreen-sheet"
+    >
+
+        <div class="sheet-handle"></div>
+
+        <div class="sheet-header">
+
+            <h2
+                id="sheetTitle"
+                class="sheet-title"
+            >
+                Room Reservation
+            </h2>
+
+            <button
+                class="sheet-close"
+                id="sheetBackButton"
+                type="button"
+                aria-label="Back"
+                onclick="goBackOneStep()"
+            >
+                &lt;
+            </button>
+
+        </div>
+
+        <div id="sheetContent"></div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* ============================================================
+   TELEGRAM
+============================================================ */
+
+const tg =
+    window.Telegram.WebApp;
+
+tg.ready();
+
+tg.expand();
+
+
+/* ============================================================
+   HOTEL ROOMS
+============================================================ */
+
+const ROOMS = {
+
+    "Double Room": {
+
+        price:25,
+
+        rooms:[
+            "101",
+            "102",
+            "103",
+            "201",
+            "202",
+            "203",
+            "209",
+            "301",
+            "302",
+            "303",
+            "403",
+            "405"
+        ]
+
+    },
+
+    "Big + Small": {
+
+        price:30,
+
+        rooms:[
+            "104",
+            "105",
+            "204",
+            "205",
+            "304",
+            "305",
+            "401"
+        ]
+
+    },
+
+    "Triple Room": {
+
+        price:35,
+
+        rooms:[
+            "106",
+            "107",
+            "206",
+            "207",
+            "306",
+            "307"
+        ]
+
+    },
+
+    "Standard Twin": {
+
+        price:25,
+
+        rooms:[
+            "108",
+            "109",
+            "208",
+            "308",
+            "309",
+            "402",
+            "404",
+            "406",
+            "407"
+        ]
+
+    },
+
+    "Family Room": {
+
+        price:25,
+
+        rooms:[
+            "110",
+            "210",
+            "310",
+            "408"
+        ]
+
+    }
+
+};
+
+
+/* ============================================================
+   ROOM STORAGE
+============================================================ */
+
+const STORAGE_KEY =
+    "hotel_room_status_v3";
+
+let roomStatus = {};
+
+
+function loadRoomStatus(){
+
+    try{
+
+        roomStatus =
+            JSON.parse(
+                localStorage.getItem(STORAGE_KEY)
+                || "{}"
+            );
+
+    }catch(error){
+
+        roomStatus={};
+
+    }
+
+}
+
+
+function saveRoomStatus(){
+
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(roomStatus)
+    );
+
+}
+
+
+/* ============================================================
+   CLEAN EXPIRED ROOMS
+============================================================ */
+
+function cleanExpiredRooms(){
+
+    const today =
+        new Date();
+
+    today.setHours(
+        0,
+        0,
+        0,
+        0
+    );
+
+    let changed=false;
+
+
+    Object.keys(roomStatus).forEach(
+        room=>{
+
+            const data =
+                roomStatus[room];
+
+            if(
+                data &&
+                data.checkout
+            ){
+
+                const checkout =
+                    new Date(
+                        data.checkout +
+                        "T00:00:00"
+                    );
+
+
+                if(
+                    checkout <= today
+                ){
+
+                    delete roomStatus[room];
+
+                    changed=true;
+
+                }
+
+            }
+
+        }
+    );
+
+
+    if(changed){
+
+        saveRoomStatus();
+
+    }
+
+}
+
+
+/* ============================================================
+   ALL ROOMS
+============================================================ */
+
+function getAllRooms(){
+
+    const result=[];
+
+
+    Object.entries(ROOMS).forEach(
+        ([type,info])=>{
+
+            info.rooms.forEach(
+                number=>{
+
+                    result.push({
+
+                        number,
+
+                        type,
+
+                        price:
+                            info.price
+
+                    });
+
+                }
+            );
+
+        }
+    );
+
+
+    // Keep All Room ordered by room number:
+    // 101-110, 201-210, 301-310, 401-408.
+    result.sort((a,b)=>parseInt(a.number,10)-parseInt(b.number,10));
+
+    return result;
+
+}
+
+
+/* ============================================================
+   ROOM STATE
+============================================================ */
+
+function getRoomState(
+    roomNumber
+){
+
+    const data =
+        roomStatus[roomNumber];
+
+
+    if(!data){
+
+        return "available";
+
+    }
+
+
+    if(
+        data.status ===
+        "occupied"
+    ){
+
+        return "occupied";
+
+    }
+
+
+    if(
+        data.status ===
+        "reserved"
+    ){
+
+        return "reserved";
+
+    }
+
+
+    return "available";
+
+}
+
+
+/* ============================================================
+   DATE
+============================================================ */
+
+function formatDisplayDate(
+    dateString
+){
+
+    if(!dateString){
+
+        return "-";
+
+    }
+
+
+    const parts =
+        dateString.split("-");
+
+
+    if(parts.length !== 3){
+
+        return dateString;
+
+    }
+
+
+    return (
+        parts[2] +
+        "/" +
+        parts[1] +
+        "/" +
+        parts[0]
+    );
+
+}
+
+
+function formatDateForBot(
+    dateString
+){
+
+    if(!dateString){
+
+        return "-";
+
+    }
+
+
+    const parts =
+        dateString.split("-");
+
+
+    if(parts.length !== 3){
+
+        return dateString;
+
+    }
+
+
+    return (
+        parts[2] +
+        "/" +
+        parts[1] +
+        "/" +
+        parts[0].slice(2)
+    );
+
+}
+
+
+/* ============================================================
+   ESCAPE HTML
+============================================================ */
+
+function escapeHTML(value){
+
+    return String(value ?? "")
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+function escapeJS(value){
+
+    return String(value)
+        .replace(
+            /\\/g,
+            "\\\\"
+        )
+        .replace(
+            /'/g,
+            "\\'"
+        );
+
+}
+
+
+/* ============================================================
+   MAIN ACTION PICKER
+============================================================ */
+
+const MAIN_ACTIONS = [
+    {
+        title: "Room Reservation",
+        subtitle: "Check available and booked rooms",
+        icon: "🛏️",
+        panel: "availability"
+    },
+    {
+        title: "Check-in",
+        subtitle: "Guest type and number of guests",
+        icon: "👤",
+        panel: "guest"
+    },
+    {
+        title: "Check-out",
+        subtitle: "View checked-in rooms and check out guests",
+        icon: "🚪",
+        panel: "checkout"
+    }
+];
+
+let mainActionIndex = 0;
+let pickerStartY = 0;
+let pickerLastY = 0;
+let pickerDragging = false;
+let pickerWheelLocked = false;
+
+function pickerActionHTML(action){
+    return `
+        <div class="picker-content">
+            <div class="picker-icon">${action.icon}</div>
+            <div>
+                <div class="picker-title">${action.title}</div>
+                <div class="picker-subtitle">${action.subtitle}</div>
+            </div>
+        </div>
+    `;
+}
+
+function renderMainActionPicker(){
+    const count = MAIN_ACTIONS.length;
+    const prev = MAIN_ACTIONS[(mainActionIndex - 1 + count) % count];
+    const selected = MAIN_ACTIONS[mainActionIndex];
+    const next = MAIN_ACTIONS[(mainActionIndex + 1) % count];
+
+    document.getElementById("pickerPrev").innerHTML = pickerActionHTML(prev);
+    document.getElementById("pickerSelected").innerHTML = pickerActionHTML(selected);
+    document.getElementById("pickerNext").innerHTML = pickerActionHTML(next);
+}
+
+function pickerMove(direction){
+    mainActionIndex = (mainActionIndex + direction + MAIN_ACTIONS.length) % MAIN_ACTIONS.length;
+    renderMainActionPicker();
+}
+
+function openSelectedMainAction(){
+    openPanel(MAIN_ACTIONS[mainActionIndex].panel);
+}
+
+function setupMainActionPicker(){
+    const picker = document.getElementById("mainActionPicker");
+    if(!picker) return;
+
+    renderMainActionPicker();
+
+    picker.addEventListener("wheel", event => {
+        event.preventDefault();
+        if(pickerWheelLocked) return;
+        pickerWheelLocked = true;
+        pickerMove(event.deltaY > 0 ? 1 : -1);
+        setTimeout(() => pickerWheelLocked = false, 420);
+    }, {passive:false});
+
+    picker.addEventListener("pointerdown", event => {
+        if(event.target.closest("button") && event.target.id === "pickerSelected") return;
+        pickerDragging = true;
+        pickerStartY = event.clientY;
+        pickerLastY = event.clientY;
+        picker.setPointerCapture?.(event.pointerId);
+    });
+
+    picker.addEventListener("pointermove", event => {
+        if(!pickerDragging) return;
+        pickerLastY = event.clientY;
+    });
+
+    picker.addEventListener("pointerup", event => {
+        if(!pickerDragging) return;
+        pickerDragging = false;
+        const distance = pickerLastY - pickerStartY;
+        if(Math.abs(distance) > 28){
+            pickerMove(distance < 0 ? 1 : -1);
+        }
+    });
+
+    picker.addEventListener("pointercancel", () => {
+        pickerDragging = false;
+    });
+}
+
+document.addEventListener("DOMContentLoaded", setupMainActionPicker);
+
+
+/* ============================================================
+   FULL SCREEN PANEL
+============================================================ */
+
+let currentPanel =
+    "availability";
+
+let currentRoomType =
+    null;
+
+let currentRoom =
+    null;
+
+/*
+   STEP-BY-STEP BACK NAVIGATION
+   The top-left button now goes back one section at a time.
+   It only closes the sheet when the user is already at the
+   first section of that panel.
+*/
+let currentView = "home";
+let previousView = null;
+
+function goBackOneStep(){
+
+    switch(currentView){
+
+        case "reservationRoot":
+            closePanel();
+            currentView = "home";
+            return;
+
+        case "roomTypeMenu":
+            if(currentPanel === "availability"){
+                renderRoomTypes("availability");
+            }else{
+                closePanel();
+                currentView = "home";
+            }
+            return;
+
+        case "floorMenu":
+        case "moreMenu":
+            renderRoomTypes("availability");
+            return;
+
+        case "allRooms":
+        case "roomType":
+            renderRoomTypes("select");
+            return;
+
+        case "floorRooms":
+            openReservationFloor();
+            return;
+
+        case "roomDetails":
+            if(previousView === "checkout"){
+                renderCheckoutPanel();
+            }else if(previousView === "allRooms"){
+                showAllRooms();
+            }else if(previousView === "floorRooms"){
+                if(previousView === "floorRooms" && window._lastFloor){
+                    showFloorRooms(window._lastFloor);
+                }else{
+                    openReservationFloor();
+                }
+            }else if(previousView === "roomType"){
+                if(currentRoomType){
+                    openRoomType(currentRoomType);
+                }else{
+                    renderRoomTypes("select");
+                }
+            }else{
+                renderRoomTypes(currentPanel === "availability" ? "availability" : "select");
+            }
+            return;
+
+        case "guest":
+        case "checkout":
+        case "stay":
+        case "payment":
+        case "contact":
+        case "id":
+            closePanel();
+            currentView = "home";
+            return;
+
+        default:
+            closePanel();
+            currentView = "home";
+            return;
+    }
+}
+
+
+function openPanel(
+    panel
+){
+
+    currentPanel =
+        panel;
+
+    currentRoomType =
+        null;
+
+    currentRoom =
+        null;
+
+
+    const overlay =
+        document.getElementById(
+            "fullscreenOverlay"
+        );
+
+
+    const sheet =
+        document.getElementById(
+            "fullscreenSheet"
+        );
+
+    sheetDrag.currentOffset = 8;
+    sheet.style.transform = "translate3d(0,8dvh,0)";
+
+    overlay.classList.add(
+        "open"
+    );
+
+
+    document.body.style.overflow =
+        "hidden";
+
+
+    if(panel === "availability"){
+
+        renderRoomTypes(
+            "availability"
+        );
+
+    }
+
+    else if(panel === "select"){
+
+        renderRoomTypes(
+            "select"
+        );
+
+    }
+
+    else if(panel === "guest"){
+
+        renderGuestPanel();
+
+    }
+
+    else if(panel === "checkout"){
+
+        renderCheckoutPanel();
+
+    }
+
+    else if(panel === "stay"){
+
+        renderStayPanel();
+
+    }
+
+    else if(panel === "payment"){
+
+        renderPaymentPanel();
+
+    }
+
+    else if(panel === "contact"){
+
+        renderContactPanel();
+
+    }
+
+    else if(panel === "id"){
+
+        renderIDPanel();
+
+    }
+
+}
+
+
+function closePanel(){
+
+    document
+        .getElementById(
+            "fullscreenOverlay"
+        )
+        .classList.remove(
+            "open"
+        );
+
+
+    document.body.style.overflow =
+        "";
+
+    currentView = "home";
+    previousView = null;
+
+}
+
+
+function overlayClicked(event){
+
+    if(
+        event.target ===
+        document.getElementById(
+            "fullscreenOverlay"
+        )
+    ){
+
+        closePanel();
+
+    }
+
+}
+
+
+/* ============================================================
+   IOS SHEET DRAG / SWIPE
+   Drag the glass panel up or down like an iPhone sheet.
+============================================================ */
+
+let sheetDrag = {
+    active:false,
+    startY:0,
+    startOffset:8,
+    currentOffset:8
+};
+
+function setupSheetDragging(){
+    const sheet = document.getElementById("fullscreenSheet");
+    const handle = sheet.querySelector(".sheet-handle");
+    if(!sheet || !handle) return;
+
+    const start = (event)=>{
+        if(!document.getElementById("fullscreenOverlay").classList.contains("open")) return;
+        const point = event;
+        sheetDrag.active = true;
+        sheetDrag.startY = point.clientY;
+        sheetDrag.startOffset = sheetDrag.currentOffset;
+        sheet.classList.add("dragging");
+        handle.setPointerCapture?.(event.pointerId);
+        event.preventDefault();
+    };
+
+    const move = (event)=>{
+        if(!sheetDrag.active) return;
+        const deltaVH = ((event.clientY - sheetDrag.startY) / window.innerHeight) * 100;
+        const next = Math.max(0, Math.min(55, sheetDrag.startOffset + deltaVH));
+        sheetDrag.currentOffset = next;
+        sheet.style.transform = `translate3d(0,${next}dvh,0)`;
+        event.preventDefault();
+    };
+
+    const end = ()=>{
+        if(!sheetDrag.active) return;
+        sheetDrag.active = false;
+        sheet.classList.remove("dragging");
+
+        const pos = sheetDrag.currentOffset;
+
+        /* iOS-like snap points: full, nearly full, and a lower half-sheet. */
+        if(pos >= 48){
+            closePanel();
+            sheetDrag.currentOffset = 8;
+            return;
+        }
+
+        if(pos < 4){
+            sheetDrag.currentOffset = 0;
+        }else if(pos < 25){
+            sheetDrag.currentOffset = 8;
+        }else{
+            sheetDrag.currentOffset = 42;
+        }
+
+        sheet.style.transform = `translate3d(0,${sheetDrag.currentOffset}dvh,0)`;
+    };
+
+    /* Pointer events give the same smooth drag behavior on iPhone, Android and desktop. */
+    handle.addEventListener("pointerdown",start,{passive:false});
+    window.addEventListener("pointermove",move,{passive:false});
+    window.addEventListener("pointerup",end,{passive:true});
+    window.addEventListener("pointercancel",end,{passive:true});
+}
+
+document.addEventListener("DOMContentLoaded",setupSheetDragging);
+
+/* ============================================================
+   PANEL TITLE
+============================================================ */
+
+function setSheetTitle(
+    title
+){
+
+    document.getElementById(
+        "sheetTitle"
+    ).textContent =
+        title;
+
+}
+
+
+/* ============================================================
+   ROOM TYPES
+============================================================ */
+
+function renderRoomTypes(
+    mode
+){
+
+    currentPanel =
+        mode;
+
+    currentView =
+        mode === "availability"
+        ? "reservationRoot"
+        : "roomTypeMenu";
+
+    if(mode === "availability"){
+
+        setSheetTitle(
+            "🛏️ Room Reservation"
+        );
+
+        document.getElementById(
+            "sheetContent"
+        ).innerHTML = `
+
+            <div class="reservation-menu-card">
+
+                <button
+                    type="button"
+                    class="reservation-menu-button"
+                    onclick="openReservationRoomType()"
+                >
+                    <span class="reservation-menu-icon">🛏️</span>
+                    <span class="reservation-menu-text">
+                        <strong>Room Type</strong>
+                        <small>Choose by room type</small>
+                    </span>
+                    <span class="reservation-menu-arrow">›</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="reservation-menu-button"
+                    onclick="openReservationFloor()"
+                >
+                    <span class="reservation-menu-icon">🏢</span>
+                    <span class="reservation-menu-text">
+                        <strong>Floor</strong>
+                        <small>Choose rooms by floor</small>
+                    </span>
+                    <span class="reservation-menu-arrow">›</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="reservation-menu-button"
+                    onclick="openReservationMore()"
+                >
+                    <span class="reservation-menu-icon">⋯</span>
+                    <span class="reservation-menu-text">
+                        <strong>More</strong>
+                        <small>More reservation options</small>
+                    </span>
+                    <span class="reservation-menu-arrow">›</span>
+                </button>
+
+            </div>
+
+        `;
+
+        return;
+    }
+
+    setSheetTitle(
+        "🔑 Select Room & Price"
+    );
+
+    let html =
+        `<div class="reservation-flow-steps">
+            <div class="reservation-flow-step active">1. Room Type</div>
+            <div class="reservation-flow-arrow">›</div>
+            <div class="reservation-flow-step">2. Select Room</div>
+            <div class="reservation-flow-arrow">›</div>
+            <div class="reservation-flow-step">3. Price & Confirm</div>
+        </div>
+        <div class="room-type-list">`;
+
+    html += `
+        <button
+            class="room-type-button all-room-button"
+            type="button"
+            onclick="showAllRooms()"
+        >
+            <div>
+                <div class="room-type-name">
+                    🏨 All Room
+                </div>
+                <div class="room-type-info">
+                    View every room
+                    · ${getAllRooms().length} rooms
+                    · status and price
+                </div>
+            </div>
+            <div class="room-type-arrow">›</div>
+        </button>
+    `;
+
+    Object.entries(
+        ROOMS
+    ).forEach(
+        ([type,info])=>{
+
+            let available=0;
+            let booked=0;
+            let reserved=0;
+
+            info.rooms.forEach(
+                room=>{
+
+                    const state =
+                        getRoomState(room);
+
+                    if(state === "available") available++;
+                    else if(state === "occupied") booked++;
+                    else reserved++;
+
+                }
+            );
+
+            html += `
+
+            <button
+                class="room-type-button"
+                type="button"
+                onclick="openRoomType(
+                    '${escapeJS(type)}'
+                )"
+            >
+
+                <div>
+
+                    <div class="room-type-name">
+                        🛏️ ${escapeHTML(type)}
+                    </div>
+
+                    <div class="room-type-info">
+                        🟢 ${available} available
+                        · 🔴 ${booked} booked
+                        ${reserved > 0 ? ` · 🟡 ${reserved} reserved` : ""}
+                        · $${info.price}/night
+                    </div>
+
+                </div>
+
+                <div class="room-type-arrow">›</div>
+
+            </button>
+
+            `;
+
+        }
+    );
+
+    html += `</div>`;
+
+    document.getElementById(
+        "sheetContent"
+    ).innerHTML = html;
+
+}
+
+function openReservationRoomType(){
+    renderRoomTypes("select");
+}
+
+function openReservationFloor(){
+    currentView = "floorMenu";
+    setSheetTitle("🏢 Floor");
+
+    const floors = ["1st Floor", "2nd Floor", "3rd Floor", "4th Floor"];
+
+    document.getElementById("sheetContent").innerHTML = `
+        <div class="reservation-menu-card">
+            ${floors.map(floor => `
+                <button
+                    type="button"
+                    class="reservation-menu-button"
+                    onclick="showFloorRooms('${escapeJS(floor)}')"
+                >
+                    <span class="reservation-menu-icon">🏢</span>
+                    <span class="reservation-menu-text">
+                        <strong>${floor}</strong>
+                        <small>View rooms on this floor</small>
+                    </span>
+                    <span class="reservation-menu-arrow">›</span>
+                </button>
+            `).join("")}
+        </div>
+    `;
+}
+
+function openReservationMore(){
+    currentView = "moreMenu";
+    setSheetTitle("⋯ More");
+
+    document.getElementById("sheetContent").innerHTML = `
+        <div class="reservation-menu-card">
+            <div class="summary">
+                <strong>More reservation options</strong><br>
+                This section is ready for additional reservation tools.
+            </div>
+        </div>
+    `;
+}
+
+function showAllRooms(){
+
+    previousView = currentView;
+    currentView = "allRooms";
+
+    currentRoomType = null;
+    currentRoom = null;
+
+    setSheetTitle("🏨 All Room");
+
+    const allRooms = getAllRooms();
+
+    /*
+        Group All Room by floor so the room list is easier to read:
+        101-110  = 1st Floor
+        201-210  = 2nd Floor
+        301-310  = 3rd Floor
+        401-408  = 4th Floor
+    */
+    const floorLabels = {
+        "1": "1st Floor",
+        "2": "2nd Floor",
+        "3": "3rd Floor",
+        "4": "4th Floor"
+    };
+
+    const roomsByFloor = {};
+
+    allRooms.forEach(room => {
+        const floorNumber = room.number.charAt(0);
+
+        if(!roomsByFloor[floorNumber]){
+            roomsByFloor[floorNumber] = [];
+        }
+
+        roomsByFloor[floorNumber].push(room);
+    });
+
+    let html = `
+        <div class="reservation-flow-steps">
+            <div class="reservation-flow-step done">1. Room Type</div>
+            <div class="reservation-flow-arrow">›</div>
+            <div class="reservation-flow-step active">2. Select Room</div>
+            <div class="reservation-flow-arrow">›</div>
+            <div class="reservation-flow-step">3. Price & Confirm</div>
+        </div>
+
+        <button
+            class="sheet-back"
+            onclick="renderRoomTypes('${escapeJS(currentPanel)}')"
+        >
+            ‹ Back to Room Types
+        </button>
+
+        <div class="small" style="margin-bottom:12px">
+            All rooms · ${allRooms.length} rooms
+        </div>
+    `;
+
+    Object.keys(roomsByFloor)
+        .sort((a,b) => Number(a) - Number(b))
+        .forEach(floorNumber => {
+
+            const floorRooms = roomsByFloor[floorNumber];
+            const floorLabel = floorLabels[floorNumber] || `${floorNumber}th Floor`;
+
+            html += `
+                <section class="all-room-floor-section">
+                    <div class="all-room-floor-title">
+                        <span>🏢 ${floorLabel}</span>
+                        <small>${floorRooms.length} rooms</small>
+                    </div>
+
+                    <div class="room-number-grid">
+            `;
+
+            floorRooms.forEach(room => {
+
+                const state = getRoomState(room.number);
+
+                const statusText =
+                    state === "available" ? "AVAILABLE" :
+                    state === "occupied" ? "BOOKED" :
+                    "RESERVED";
+
+                const css =
+                    state === "occupied" ? "booked" :
+                    state === "reserved" ? "reserved" :
+                    "";
+
+                html += `
+                    <button
+                        type="button"
+                        class="room-number-button ${css}"
+                        onclick="showRoomDetails('${escapeJS(room.number)}')"
+                    >
+                        <span>${escapeHTML(room.number)}</span>
+                        <span class="room-type-mini">${escapeHTML(room.type)}</span>
+                        <span class="room-status-text">${statusText} · $${Number(room.price).toFixed(0)}/night</span>
+                    </button>
+                `;
+            });
+
+            html += `
+                    </div>
+                </section>
+            `;
+        });
+
+    html += `
+        <div id="roomDetailArea"></div>
+    `;
+
+    document.getElementById("sheetContent").innerHTML = html;
+}
+
+
+function showFloorRooms(floor){
+    previousView = "floorMenu";
+    currentView = "floorRooms";
+    window._lastFloor = floor;
+
+    const floorNumber = floor.charAt(0);
+
+    const roomsOnFloor = getAllRooms().filter(
+        room => room.number.startsWith(floorNumber)
+    );
+
+    setSheetTitle("🏢 " + floor);
+
+    if(!roomsOnFloor.length){
+        document.getElementById("sheetContent").innerHTML = `
+            <div class="summary">No rooms found on this floor.</div>
+        `;
+        return;
+    }
+
+    let html = `<div class="room-number-grid">`;
+
+    roomsOnFloor.forEach(room => {
+        const state = getRoomState(room.number);
+        const statusText =
+            state === "available" ? "AVAILABLE" :
+            state === "occupied" ? "BOOKED" : "RESERVED";
+
+        html += `
+            <button
+                type="button"
+                class="room-number-button ${state}"
+                onclick="showRoomDetails('${escapeJS(room.number)}')"
+            >
+                <span>${escapeHTML(room.number)}</span>
+                <span class="room-status-text">${statusText}</span>
+            </button>
+        `;
+    });
+
+    html += `</div>`;
+
+    document.getElementById("sheetContent").innerHTML = html;
+}
+
+
+/* ============================================================
+   ROOM NUMBERS
+============================================================ */
+
+function openRoomType(
+    type
+){
+
+    previousView = currentView;
+    currentView = "roomType";
+
+    currentRoomType =
+        type;
+
+
+    currentRoom =
+        null;
+
+
+    const info =
+        ROOMS[type];
+
+
+    setSheetTitle(
+        currentPanel ===
+        "availability"
+        ? "🛏️ " + type
+        : "🔑 " + type
+    );
+
+
+    let html = `
+
+        <button
+            class="sheet-back"
+            onclick="renderRoomTypes(
+                '${escapeJS(currentPanel)}'
+            )"
+        >
+
+            ‹ Back to Room Types
+
+        </button>
+
+        <div
+            class="small"
+            style="margin-bottom:12px"
+        >
+
+            ${escapeHTML(type)}
+            ·
+            $${info.price}/night
+
+        </div>
+
+        <div
+            class="room-number-grid"
+        >
+    `;
+
+
+    info.rooms.forEach(
+        roomNumber=>{
+
+            const state =
+                getRoomState(
+                    roomNumber
+                );
+
+
+            const statusText =
+                state === "available"
+                ?
+                "AVAILABLE"
+                :
+                state === "occupied"
+                ?
+                "BOOKED"
+                :
+                "RESERVED";
+
+
+            const css =
+                state === "occupied"
+                ?
+                "booked"
+                :
+                state === "reserved"
+                ?
+                "reserved"
+                :
+                "";
+
+
+            html += `
+
+                <button
+                    class="
+                        room-number-button
+                        ${css}
+                    "
+                    onclick="showRoomDetails(
+                        '${escapeJS(roomNumber)}'
+                    )"
+                >
+
+                    <span>
+                        Room ${escapeHTML(roomNumber)}
+                    </span>
+
+                    <span
+                        class="room-status-text"
+                    >
+                        ${statusText}
+                    </span>
+
+                </button>
+
+            `;
+
+        }
+    );
+
+
+    html += `
+        </div>
+
+        <div
+            id="roomDetailArea"
+        ></div>
+    `;
+
+
+    document.getElementById(
+        "sheetContent"
+    ).innerHTML =
+        html;
+
+}
+
+
+/* ============================================================
+   ROOM DETAILS
+============================================================ */
+
+function showRoomDetails(
+    roomNumber
+){
+
+    previousView = currentView;
+    currentView = "roomDetails";
+
+    currentRoom =
+        roomNumber;
+
+
+    const room =
+        getAllRooms()
+        .find(
+            r =>
+            r.number ===
+            roomNumber
+        );
+
+
+    if(!room){
+
+        return;
+
+    }
+
+
+    const state =
+        getRoomState(
+            roomNumber
+        );
+
+
+    const data =
+        roomStatus[
+            roomNumber
+        ] || {};
+
+
+    let html =
+        `<div class="reservation-flow-steps">
+            <div class="reservation-flow-step done">1. Room Type</div>
+            <div class="reservation-flow-arrow">›</div>
+            <div class="reservation-flow-step done">2. Select Room</div>
+            <div class="reservation-flow-arrow">›</div>
+            <div class="reservation-flow-step active">3. Price & Confirm</div>
+        </div>
+        <div class="room-detail-card">`;
+
+
+    html += `
+
+        <div
+            class="room-detail-title"
+        >
+
+            Room ${escapeHTML(
+                roomNumber
+            )}
+
+        </div>
+    `;
+
+
+    if(
+        state ===
+        "available"
+    ){
+
+        html += `
+
+            <div
+                class="available-box"
+            >
+
+                🟢 AVAILABLE
+
+            </div>
+
+        `;
+
+    }
+
+
+    else if(
+        state ===
+        "occupied"
+    ){
+
+        html += `
+
+            <div
+                class="booked-box"
+            >
+
+                🔴 BOOKED
+
+            </div>
+
+        `;
+
+    }
+
+
+    else{
+
+        html += `
+
+            <div
+                class="reserved-box"
+            >
+
+                🟡 RESERVED
+
+            </div>
+
+        `;
+
+    }
+
+
+    html += `
+
+        <div class="detail-row">
+
+            <strong>
+                Room Type:
+            </strong>
+
+            ${escapeHTML(
+                room.type
+            )}
+
+        </div>
+
+    `;
+
+
+    const price =
+        Number(
+            data.guestPrice ||
+            room.price
+        );
+
+
+    html += `
+
+        <div class="detail-row">
+
+            <strong>
+                Price:
+            </strong>
+
+            $${price.toFixed(2)}
+            / night
+
+        </div>
+
+    `;
+
+
+    if(
+        state !==
+        "available"
+    ){
+
+        html += `
+
+            <div class="detail-row">
+
+                <strong>
+                    Guest:
+                </strong>
+
+                ${escapeHTML(
+                    data.guestName ||
+                    "Guest"
+                )}
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <strong>
+                    Check-in:
+                </strong>
+
+                ${formatDisplayDate(
+                    data.checkin
+                )}
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <strong>
+                    Check-out:
+                </strong>
+
+                ${formatDisplayDate(
+                    data.checkout
+                )}
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <strong>
+                    Nights:
+                </strong>
+
+                ${data.nights || "-"}
+
+            </div>
+
+        `;
+
+    }
+
+
+    if(
+        state ===
+        "available" &&
+        currentPanel ===
+        "select"
+    ){
+
+        html += `
+
+            <div class="room-price-step-hint">
+                Set the guest price for this room, then confirm the room selection.
+            </div>
+
+            <label>
+                Guest Price
+            </label>
+
+            <input
+                id="fullScreenGuestPrice"
+                type="number"
+                step="0.01"
+                min="0"
+                value="${room.price}"
+            >
+
+            <button
+                class="select-room-button"
+                onclick="selectRoomFromPanel(
+                    '${escapeJS(roomNumber)}'
+                )"
+            >
+
+                ✅ Select Room
+                ${escapeHTML(roomNumber)}
+
+            </button>
+
+        `;
+
+    }
+
+    if(
+        state ===
+        "occupied" &&
+        currentPanel ===
+        "checkout"
+    ){
+
+        html += `
+
+            <button
+                class="select-room-button"
+                style="background:#dc2626"
+                onclick="checkOutRoom(
+                    '${escapeJS(roomNumber)}'
+                )"
+            >
+
+                🚪 Check-out Room
+                ${escapeHTML(roomNumber)}
+
+            </button>
+
+        `;
+
+    }
+
+
+    html +=
+        `</div>`;
+
+
+    document.getElementById(
+        "roomDetailArea"
+    ).innerHTML =
+        html;
+
+
+    document.getElementById(
+        "roomDetailArea"
+    ).scrollIntoView({
+        behavior:"smooth",
+        block:"nearest"
+    });
+
+}
+
+
+/* ============================================================
+   SELECT ROOM
+============================================================ */
+
+function selectRoomFromPanel(
+    roomNumber
+){
+
+    if(
+        getRoomState(
+            roomNumber
+        ) !== "available"
+    ){
+
+        alert(
+            "This room is not available."
+        );
+
+        return;
+
+    }
+
+
+    renderRoomSelection();
+
+
+    const checkbox =
+        document.querySelector(
+            `.room-check[data-number="${roomNumber}"]`
+        );
+
+
+    if(!checkbox){
+
+        alert(
+            "Could not select the room."
+        );
+
+        return;
+
+    }
+
+
+    checkbox.checked =
+        true;
+
+
+    const priceInput =
+        document.querySelector(
+            `.guest-price-input[data-room="${roomNumber}"]`
+        );
+
+
+    const fullPrice =
+        document.getElementById(
+            "fullScreenGuestPrice"
+        );
+
+
+    if(
+        priceInput &&
+        fullPrice
+    ){
+
+        priceInput.value =
+            fullPrice.value;
+
+    }
+
+
+    updateTotals();
+
+
+    closePanel();
+
+}
+
+
+/* ============================================================
+   GUEST PANEL
+============================================================ */
+
+function renderGuestPanel(){
+
+    /* Check-in now starts with identity verification.
+       After a readable ID/passport is recognised, the UI
+       automatically moves to the guest-information step. */
+    renderIDPanel(true);
+
+}
+
+function renderGuestInformationStep(){
+
+    currentView = "guest";
+
+    setSheetTitle(
+        "👤 Check-in · Guest Information"
+    );
+
+    document.getElementById(
+        "sheetContent"
+    ).innerHTML = `
+
+        <div class="card checkin-step-card">
+
+            <div class="checkin-step-label">STEP 2</div>
+
+            <h3 class="checkin-step-title">Guest Information</h3>
+
+            <div class="small checkin-step-subtitle">
+                Identity recognised. Continue with the guest details.
+            </div>
+
+            <div class="status success" style="display:block">
+                ✅ ID / Passport accepted automatically.
+            </div>
+
+            <label>Guest Type</label>
+
+            <select
+                onchange="copyValue('guestType',this.value)"
+            >
+                <option value="walk in">Walk In</option>
+                <option value="booking">Booking</option>
+                <option value="tuk tuk">Tuk Tuk</option>
+                <option value="taxi">Taxi</option>
+            </select>
+
+            <label>Pax</label>
+
+            <input
+                type="number"
+                min="1"
+                value="1"
+                inputmode="numeric"
+                onchange="copyValue('pax',this.value)"
+            >
+
+            <div class="checkin-next-hint">
+                The recognised identity information is already filled into the reservation form.
+            </div>
+
+        </div>
+    `;
+
+}
+
+
+/* ============================================================
+   CHECK-OUT PANEL
+============================================================ */
+
+function renderCheckoutPanel(){
+
+    currentView = "checkout";
+
+    setSheetTitle(
+        "🚪 Check-out"
+    );
+
+    const occupiedRooms =
+        getAllRooms().filter(
+            room =>
+                getRoomState(room.number) === "occupied"
+        );
+
+    if(occupiedRooms.length === 0){
+
+        document.getElementById(
+            "sheetContent"
+        ).innerHTML = `
+            <div class="card checkin-step-card">
+                <div class="available-box">
+                    🟢 No checked-in rooms
+                </div>
+                <div class="small">
+                    There are currently no occupied rooms to check out.
+                </div>
+            </div>
+        `;
+
+        return;
+    }
+
+    let html = `
+        <div class="room-type-list">
+    `;
+
+    occupiedRooms.forEach(
+        room => {
+
+            const data =
+                roomStatus[room.number] || {};
+
+            html += `
+                <button
+                    class="room-type-button"
+                    onclick="showRoomDetails('${escapeJS(room.number)}')"
+                >
+                    <div>
+                        <div class="room-type-name">
+                            🚪 Room ${escapeHTML(room.number)}
+                        </div>
+                        <div class="room-type-info">
+                            ${escapeHTML(room.type)}
+                            · ${escapeHTML(data.guestName || "Guest")}
+                            · Check-out:
+                            ${formatDisplayDate(data.checkout)}
+                        </div>
+                    </div>
+                    <div class="room-type-arrow">›</div>
+                </button>
+            `;
+        }
+    );
+
+    html += `
+        </div>
+
+        <div id="roomDetailArea"></div>
+    `;
+
+    document.getElementById(
+        "sheetContent"
+    ).innerHTML = html;
+}
+
+
+/* ============================================================
+   CHECK-OUT ROOM
+============================================================ */
+
+function checkOutRoom(roomNumber){
+
+    const data =
+        roomStatus[roomNumber];
+
+    if(!data){
+
+        alert(
+            "This room is already available."
+        );
+
+        renderCheckoutPanel();
+        return;
+    }
+
+    const guestName =
+        data.guestName ||
+        "Guest";
+
+    if(
+        !confirm(
+            `Check-out Room ${roomNumber} for ${guestName}?`
+        )
+    ){
+
+        return;
+    }
+
+    delete roomStatus[roomNumber];
+
+    saveRoomStatus();
+
+    const checkoutData = {
+        action: "check_out",
+        room_number: roomNumber,
+        room_type: data.roomType || "",
+        guest_name: guestName,
+        checkin: formatDateForBot(data.checkin),
+        checkout: formatDateForBot(data.checkout),
+        checked_out_at: new Date().toISOString()
+    };
+
+    try{
+
+        tg.sendData(
+            JSON.stringify(
+                checkoutData
+            )
+        );
+
+    }catch(error){
+
+        console.error(
+            error
+        );
+
+    }
+
+    alert(
+        `✅ Check-out completed!\n\nRoom: ${roomNumber}\nGuest: ${guestName}`
+    );
+
+    renderCheckoutPanel();
+}
+
+
+/* ============================================================
+   STAY PANEL
+============================================================ */
+
+function renderStayPanel(){
+
+    currentView = "stay";
+
+    setSheetTitle(
+        "🗓️ Stay Information"
+    );
+
+
+    document.getElementById(
+        "sheetContent"
+    ).innerHTML = `
+
+        <div class="card">
+
+            <label>
+                Check-in
+            </label>
+
+            <input
+                id="panelCheckin"
+                type="date"
+                onchange="
+                    copyValue(
+                        'checkin',
+                        this.value
+                    );
+                    updateCheckout();
+                    renderStayPanel();
+                "
+            >
+
+
+            <label>
+                Nights
+            </label>
+
+            <input
+                id="panelNights"
+                type="number"
+                min="1"
+                value="1"
+                onchange="
+                    copyValue(
+                        'nights',
+                        this.value
+                    );
+                    updateCheckout();
+                    renderStayPanel();
+                "
+            >
+
+
+            <label>
+                Check-out
+            </label>
+
+            <input
+                id="panelCheckout"
+                type="date"
+                readonly
+            >
+
+
+            <div
+                class="summary"
+            >
+
+                <strong>
+                    Current stay:
+                </strong>
+
+                <br>
+
+                ${formatDisplayDate(
+                    document.getElementById(
+                        "checkin"
+                    ).value
+                )}
+
+                →
+
+                ${formatDisplayDate(
+                    document.getElementById(
+                        "checkout"
+                    ).value
+                )}
+
+                <br>
+
+                Nights:
+                ${
+                    document.getElementById(
+                        "nights"
+                    ).value || 1
+                }
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    document.getElementById(
+        "panelCheckin"
+    ).value =
+        document.getElementById(
+            "checkin"
+        ).value;
+
+
+    document.getElementById(
+        "panelNights"
+    ).value =
+        document.getElementById(
+            "nights"
+        ).value;
+
+
+    document.getElementById(
+        "panelCheckout"
+    ).value =
+        document.getElementById(
+            "checkout"
+        ).value;
+
+}
+
+
+/* ============================================================
+   PAYMENT PANEL
+============================================================ */
+
+function renderPaymentPanel(){
+
+    currentView = "payment";
+
+    setSheetTitle(
+        "💳 Payment"
+    );
+
+
+    document.getElementById(
+        "sheetContent"
+    ).innerHTML = `
+
+        <div class="card">
+
+            <label>
+                Payment Status
+            </label>
+
+            <select
+                onchange="copyValue(
+                    'paymentStatus',
+                    this.value
+                )"
+            >
+
+                <option value="រួចរាល់">
+                    រួចរាល់
+                </option>
+
+                <option value="មិនទាន់បង់">
+                    មិនទាន់បង់
+                </option>
+
+                <option value="partial">
+                    Partial
+                </option>
+
+            </select>
+
+
+            <label>
+                Payment Method
+            </label>
+
+            <select
+                onchange="copyValue(
+                    'paymentMethod',
+                    this.value
+                )"
+            >
+
+                <option value="AC">
+                    AC
+                </option>
+
+                <option value="Cash">
+                    Cash
+                </option>
+
+                <option value="Card">
+                    Card
+                </option>
+
+                <option value="Bank">
+                    Bank
+                </option>
+
+            </select>
+
+
+            <div
+                class="total-box"
+            >
+
+                Price / Night:
+                <span
+                    id="panelNightPrice"
+                >
+                    $0.00
+                </span>
+
+                <br>
+
+                Total:
+                <span
+                    id="panelTotalPrice"
+                >
+                    $0.00
+                </span>
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    const ps =
+        document.getElementById(
+            "panelNightPrice"
+        );
+
+
+    const pt =
+        document.getElementById(
+            "panelTotalPrice"
+        );
+
+
+    ps.textContent =
+        document.getElementById(
+            "nightPrice"
+        ).textContent;
+
+
+    pt.textContent =
+        document.getElementById(
+            "totalPrice"
+        ).textContent;
+
+}
+
+
+/* ============================================================
+   CONTACT PANEL
+============================================================ */
+
+function renderContactPanel(){
+
+    currentView = "contact";
+
+    setSheetTitle(
+        "📞 Contact & Notes"
+    );
+
+
+    document.getElementById(
+        "sheetContent"
+    ).innerHTML = `
+
+        <div class="card">
+
+            <label>
+                Phone
+            </label>
+
+            <input
+                type="tel"
+                value="${escapeHTML(
+                    document.getElementById(
+                        "phone"
+                    ).value
+                )}"
+                oninput="copyValue(
+                    'phone',
+                    this.value
+                )"
+                placeholder="Phone number"
+            >
+
+
+            <label>
+                Note
+            </label>
+
+            <textarea
+                oninput="copyValue(
+                    'note',
+                    this.value
+                )"
+                placeholder="Additional note..."
+            >${escapeHTML(
+                document.getElementById(
+                    "note"
+                ).value
+            )}</textarea>
+
+        </div>
+
+    `;
+
+}
+
+
+/* ============================================================
+   ID PANEL
+============================================================ */
+
+function renderIDPanel(autoAdvance=false){
+    currentView = "id";
+
+    setSheetTitle("🪪 ID / Passport Scanner");
+
+    document.getElementById("sheetContent").innerHTML = `
+        <div class="card">
+            <div class="checkin-step-label">STEP 1</div>
+            <h3 class="checkin-step-title">Scan ID or Passport</h3>
+            <div class="small checkin-step-subtitle">
+                Scan like a document/PDF scanner. Keep the whole document inside the blue guide, then capture it. The scan is cropped, enhanced and can be saved as an image or PDF.
+            </div>
+
+            <div class="scanner-card">
+                <button type="button" class="native-scan-button" onclick="openNativeIDScanner()">📷 Scan ID / Passport</button>
+                <input id="nativeIDScannerInput" type="file" accept="image/*" capture="environment" style="display:none" onchange="handleNativeIDScanner(event)">
+                <div class="scanner-native-note">On iPhone, this opens the native camera. After capture, the image is enhanced and OCR is used to fill the document details.</div>
+                <div class="scanner-frame" id="scannerFrame">
+                    <video id="scannerVideo" class="scanner-video" autoplay playsinline muted></video>
+                    <canvas id="scannerCanvas" class="scanner-canvas"></canvas>
+                    <img id="scannerPreview" class="scanner-preview" alt="Scanned ID or passport">
+
+                    <div class="scanner-topbar">
+                        <span class="scanner-icon">⚡︎</span>
+                        <span class="scanner-level">Document</span>
+                        <span class="scanner-close-look">×</span>
+                    </div>
+
+                    <div class="scanner-target" id="scannerTarget" aria-hidden="true">
+                        <span class="corner-tr"></span>
+                        <span class="corner-bl"></span>
+                    </div>
+                    <div class="scanner-line"></div>
+
+                    <div class="scanner-mode-row">
+                        <span class="scanner-mode active" id="documentModeButton">DOCUMENT</span>
+                        <span class="scanner-mode" id="idCardModeButton">ID CARD</span>
+                    </div>
+                </div>
+
+                <div class="scanner-tracking" id="scannerTracking">
+                    <span class="tracking-dot"></span>
+                    <span id="scannerTrackingText">Starting camera…</span>
+                </div>
+
+                <div class="scanner-controls">
+                    <button type="button" class="scanner-action scanner-shutter" id="startScannerButton" aria-label="Capture document" onclick="cameraButtonAction()"></button>
+                </div>
+                <div class="scanner-hint">Place the document inside the frame · Tap the shutter to scan</div>
+
+                <div class="scanner-result" id="scannerResult">
+                    <div class="scanner-result-title">Scanned document</div>
+                    <img id="scannerResultImage" alt="Processed document scan">
+                    <div class="scanner-processing" id="scannerProcessing">Preparing document scan…</div>
+                    <div class="scanner-result-actions">
+                        <button type="button" class="scanner-retake" onclick="retakeDocumentScan()">Retake</button>
+                        <button type="button" class="scanner-save" onclick="saveScannedImageToPhotos()">Save Image</button>
+                        <button type="button" class="scanner-pdf" onclick="saveScannedDocumentPDF()">Save PDF</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="scannerSuccess" class="scanner-success">
+                ✅ Scan ready. You can save the image to Photos or create a PDF document.
+            </div>
+
+            <div id="ocrStatus" class="status"></div>
+
+            <div class="small" style="margin-top:15px">Document details</div>
+            <label>Document Type</label>
+            <select onchange="copyValue('documentType',this.value)">
+                <option value="">Not selected</option>
+                <option value="Passport">Passport</option>
+                <option value="ID Card">ID Card</option>
+                <option value="Other">Other</option>
+            </select>
+            <label>Full Name</label>
+            <input type="text" oninput="copyValue('idName',this.value)" placeholder="Guest full name">
+            <label>Passport / ID Number</label>
+            <input type="text" oninput="copyValue('documentNumber',this.value)" placeholder="Document number">
+            <label>Nationality</label>
+            <input type="text" oninput="copyValue('nationality',this.value)" placeholder="Nationality">
+            <label>Date of Birth</label>
+            <input type="text" oninput="copyValue('dateOfBirth',this.value)" placeholder="DD/MM/YYYY">
+            <label>Expiry Date</label>
+            <input type="text" oninput="copyValue('expiryDate',this.value)" placeholder="DD/MM/YYYY">
+
+            <button type="button" class="secondary" onclick="renderGuestInformationStep()">Continue →</button>
+        </div>
+    `;
+
+    window._checkinAutoAdvance = !!autoAdvance;
+    window._scannerDocumentMode = "DOCUMENT";
+    setTimeout(()=>startLiveScanner(),120);
+}
+
+
+
+/* ============================================================
+   COPY PANEL VALUE
+============================================================ */
+
+function copyValue(
+    id,
+    value
+){
+
+    const element =
+        document.getElementById(
+            id
+        );
+
+
+    if(element){
+
+        element.value =
+            value;
+
+    }
+
+}
+
+
+/* ============================================================
+   ROOM SELECTION DATA
+============================================================ */
+
+function renderRoomSelection(){
+
+    const container =
+        document.getElementById(
+            "roomSelection"
+        );
+
+
+    if(!container){
+
+        return;
+
+    }
+
+
+    container.innerHTML =
+        "";
+
+
+    Object.entries(
+        ROOMS
+    ).forEach(
+        ([type,information])=>{
+
+            information.rooms.forEach(
+                roomNumber=>{
+
+                    const state =
+                        getRoomState(
+                            roomNumber
+                        );
+
+
+                    const data =
+                        roomStatus[
+                            roomNumber
+                        ] || {};
+
+
+                    const disabled =
+                        state !==
+                        "available";
+
+
+                    const div =
+                        document.createElement(
+                            "div"
+                        );
+
+
+                    div.className =
+                        "select-room";
+
+
+                    div.innerHTML = `
+
+                        <label>
+
+                            <input
+                                type="checkbox"
+                                class="room-check"
+                                data-number="${roomNumber}"
+                                data-type="${escapeHTML(type)}"
+                                data-main-price="${information.price}"
+                                onchange="updateTotals()"
+                                ${disabled ? "disabled" : ""}
+                            >
+
+                            Room ${roomNumber}
+
+                            -
+                            ${escapeHTML(type)}
+
+                        </label>
+
+
+                        ${
+                            disabled
+                            ?
+                            `
+                            <div class="small">
+
+                                ${
+                                    state ===
+                                    "occupied"
+                                    ?
+                                    "🔴 BOOKED"
+                                    :
+                                    "🟡 RESERVED"
+                                }
+
+                                <br>
+
+                                ${escapeHTML(
+                                    data.guestName ||
+                                    "Guest"
+                                )}
+
+                                <br>
+
+                                ${formatDisplayDate(
+                                    data.checkin
+                                )}
+
+                                →
+                                ${formatDisplayDate(
+                                    data.checkout
+                                )}
+
+                            </div>
+                            `
+                            :
+                            `
+                            <input
+                                type="number"
+                                class="guest-price-input"
+                                data-room="${roomNumber}"
+                                value="${information.price}"
+                                step="0.01"
+                                min="0"
+                                onchange="updateTotals()"
+                            >
+                            `
+                        }
+
+                    `;
+
+
+                    container.appendChild(
+                        div
+                    );
+
+                }
+            );
+
+        }
+    );
+
+}
+
+
+function getSelectedRooms(){
+
+    const checks =
+        document.querySelectorAll(
+            ".room-check:checked"
+        );
+
+
+    const rooms=[];
+
+
+    checks.forEach(
+        checkbox=>{
+
+            const roomNumber =
+                checkbox.dataset.number;
+
+
+            const type =
+                checkbox.dataset.type;
+
+
+            const mainPrice =
+                Number(
+                    checkbox.dataset.mainPrice
+                );
+
+
+            const priceInput =
+                document.querySelector(
+                    `.guest-price-input[data-room="${roomNumber}"]`
+                );
+
+
+            let guestPrice =
+                priceInput
+                ?
+                Number(
+                    priceInput.value
+                )
+                :
+                mainPrice;
+
+
+            if(
+                !Number.isFinite(
+                    guestPrice
+                )
+            ){
+
+                guestPrice =
+                    mainPrice;
+
+            }
+
+
+            rooms.push({
+
+                number:
+                    roomNumber,
+
+                type:
+                    type,
+
+                main_price:
+                    mainPrice,
+
+                guest_price:
+                    guestPrice
+
+            });
+
+        }
+    );
+
+
+    return rooms;
+
+}
+
+
+/* ============================================================
+   TOTALS
+============================================================ */
+
+function updateTotals(){
+
+    const rooms =
+        getSelectedRooms();
+
+
+    let price=0;
+
+
+    rooms.forEach(
+        room=>{
+
+            price +=
+                Number(
+                    room.guest_price
+                );
+
+        }
+    );
+
+
+    const nights =
+        Number(
+            document.getElementById(
+                "nights"
+            ).value
+        ) || 0;
+
+
+    const total =
+        price *
+        nights;
+
+
+    document.getElementById(
+        "nightPrice"
+    ).textContent =
+        "$" +
+        price.toFixed(2);
+
+
+    document.getElementById(
+        "totalPrice"
+    ).textContent =
+        "$" +
+        total.toFixed(2);
+
+
+    updateStaySummary();
+
+}
+
+
+/* ============================================================
+   DATES
+============================================================ */
+
+function updateCheckout(){
+
+    const checkin =
+        document.getElementById(
+            "checkin"
+        ).value;
+
+
+    const nights =
+        Number(
+            document.getElementById(
+                "nights"
+            ).value
+        );
+
+
+    if(
+        !checkin ||
+        !nights ||
+        nights < 1
+    ){
+
+        document.getElementById(
+            "checkout"
+        ).value =
+            "";
+
+        updateStaySummary();
+
+        updateTotals();
+
+        return;
+
+    }
+
+
+    const date =
+        new Date(
+            checkin +
+            "T00:00:00"
+        );
+
+
+    date.setDate(
+        date.getDate() +
+        nights
+    );
+
+
+    const year =
+        date.getFullYear();
+
+
+    const month =
+        String(
+            date.getMonth()+1
+        ).padStart(
+            2,
+            "0"
+        );
+
+
+    const day =
+        String(
+            date.getDate()
+        ).padStart(
+            2,
+            "0"
+        );
+
+
+    document.getElementById(
+        "checkout"
+    ).value =
+        `${year}-${month}-${day}`;
+
+
+    updateStaySummary();
+
+    updateTotals();
+
+}
+
+
+function updateStaySummary(){
+
+    const checkin =
+        document.getElementById(
+            "checkin"
+        ).value;
+
+
+    const checkout =
+        document.getElementById(
+            "checkout"
+        ).value;
+
+
+    const nights =
+        Number(
+            document.getElementById(
+                "nights"
+            ).value
+        ) || 0;
+
+
+    document.getElementById(
+        "staySummary"
+    ).innerHTML = `
+
+        <strong>
+            Stay:
+        </strong>
+
+        ${formatDisplayDate(
+            checkin
+        )}
+
+        →
+
+        ${formatDisplayDate(
+            checkout
+        )}
+
+        <br>
+
+        <strong>
+            Nights:
+        </strong>
+
+        ${nights}
+
+    `;
+
+}
+
+
+/* ============================================================
+   SUBMIT CHECK-IN
+============================================================ */
+
+function submitCheckin(){
+
+    const rooms =
+        getSelectedRooms();
+
+
+    if(
+        rooms.length === 0
+    ){
+
+        alert(
+            "Please select at least one available room."
+        );
+
+        return;
+
+    }
+
+
+    const pax =
+        Number(
+            document.getElementById(
+                "pax"
+            ).value
+        );
+
+
+    const adult =
+        Number(
+            document.getElementById(
+                "adult"
+            ).value
+        );
+
+
+    const children =
+        Number(
+            document.getElementById(
+                "children"
+            ).value
+        );
+
+
+    const nights =
+        Number(
+            document.getElementById(
+                "nights"
+            ).value
+        );
+
+
+    const checkin =
+        document.getElementById(
+            "checkin"
+        ).value;
+
+
+    const checkout =
+        document.getElementById(
+            "checkout"
+        ).value;
+
+
+    if(
+        pax < 1
+    ){
+
+        alert(
+            "Please enter the number of guests."
+        );
+
+        return;
+
+    }
+
+
+    if(
+        adult < 0 ||
+        children < 0
+    ){
+
+        alert(
+            "Invalid guest numbers."
+        );
+
+        return;
+
+    }
+
+
+    if(
+        nights < 1
+    ){
+
+        alert(
+            "Please enter the number of nights."
+        );
+
+        return;
+
+    }
+
+
+    if(
+        !checkin ||
+        !checkout
+    ){
+
+        alert(
+            "Please select the check-in date."
+        );
+
+        return;
+
+    }
+
+
+    const guestName =
+        document.getElementById(
+            "idName"
+        ).value.trim()
+        ||
+        "Guest";
+
+
+    rooms.forEach(
+        room=>{
+
+            roomStatus[
+                room.number
+            ]={
+
+                status:
+                    "occupied",
+
+                guestName:
+                    guestName,
+
+                roomType:
+                    room.type,
+
+                roomNumber:
+                    room.number,
+
+                checkin:
+                    checkin,
+
+                checkout:
+                    checkout,
+
+                nights:
+                    nights,
+
+                guestPrice:
+                    room.guest_price,
+
+                updatedAt:
+                    new Date()
+                    .toISOString()
+
+            };
+
+        }
+    );
+
+
+    saveRoomStatus();
+
+
+    const idDocument={
+
+        document_type:
+            document.getElementById(
+                "documentType"
+            ).value.trim(),
+
+        name:
+            document.getElementById(
+                "idName"
+            ).value.trim(),
+
+        document_number:
+            document.getElementById(
+                "documentNumber"
+            ).value.trim(),
+
+        nationality:
+            document.getElementById(
+                "nationality"
+            ).value.trim(),
+
+        date_of_birth:
+            document.getElementById(
+                "dateOfBirth"
+            ).value.trim(),
+
+        expiry_date:
+            document.getElementById(
+                "expiryDate"
+            ).value.trim()
+
+    };
+
+
+    const data={
+
+        action:
+            "check_in",
+
+        guest_type:
+            document.getElementById(
+                "guestType"
+            ).value,
+
+        pax:
+            pax,
+
+        adult:
+            adult,
+
+        children:
+            children,
+
+        rooms:
+            rooms,
+
+        nights:
+            nights,
+
+        checkin:
+            formatDateForBot(
+                checkin
+            ),
+
+        checkout:
+            formatDateForBot(
+                checkout
+            ),
+
+        payment_status:
+            document.getElementById(
+                "paymentStatus"
+            ).value,
+
+        payment_method:
+            document.getElementById(
+                "paymentMethod"
+            ).value,
+
+        phone:
+            document.getElementById(
+                "phone"
+            ).value.trim(),
+
+        note:
+            document.getElementById(
+                "note"
+            ).value.trim(),
+
+        guest_name:
+            guestName,
+
+        id_document:
+            idDocument
+
+    };
+
+
+    alert(
+
+        `✅ Check-in saved!\n\n` +
+
+        `Room: ${
+            rooms
+                .map(
+                    r=>r.number
+                )
+                .join(", ")
+        }\n` +
+
+        `Guest: ${
+            guestName
+        }\n` +
+
+        `Check-in: ${
+            formatDisplayDate(
+                checkin
+            )
+        }\n` +
+
+        `Check-out: ${
+            formatDisplayDate(
+                checkout
+            )
+        }`
+
+    );
+
+
+    try{
+
+        tg.sendData(
+            JSON.stringify(
+                data
+            )
+        );
+
+    }catch(error){
+
+        console.error(
+            error
+        );
+
+        alert(
+            "The room was saved locally, but Telegram could not receive the data."
+        );
+
+    }
+
+
+    closePanel();
+
+}
+
+
+/* ============================================================
+   CLEAR ROOM DATA
+============================================================ */
+
+function clearAllRoomData(){
+
+    if(
+        !confirm(
+            "Are you sure you want to clear all saved room status?"
+        )
+    ){
+
+        return;
+
+    }
+
+
+    roomStatus={};
+
+
+    saveRoomStatus();
+
+
+    alert(
+        "Room status cleared."
+    );
+
+}
+
+
+/* ============================================================
+   ID / PASSPORT OCR
+============================================================ */
+
+let scannerStream = null;
+let scannerStarted = false;
+let scannerTrackingTimer = null;
+let lastCaptureBlob = null;
+let lastScannedBlob = null;
+let lastScannedDataUrl = null;
+
+function openCamera(){ cameraButtonAction(); }
+
+function openNativeIDScanner(){
+    const input=document.getElementById("nativeIDScannerInput");
+    if(!input) return;
+    stopLiveScanner();
+    input.value="";
+    input.click();
+}
+
+async function handleNativeIDScanner(event){
+    const file=event.target.files?.[0];
+    if(!file) return;
+    try{
+        showOCRStatus("✨ Processing the captured ID / passport…","warning");
+        const processed=await enhanceCapturedDocument(file);
+        lastCaptureBlob=processed;
+        lastScannedBlob=processed;
+        const url=URL.createObjectURL(processed);
+        lastScannedDataUrl=url;
+        const result=document.getElementById("scannerResult");
+        const resultImg=document.getElementById("scannerResultImage");
+        const success=document.getElementById("scannerSuccess");
+        if(resultImg) resultImg.src=url;
+        if(result) result.style.display="block";
+        if(success) success.style.display="block";
+        showOCRStatus("🔍 Reading ID / Passport…","warning");
+        if(window.Tesseract?.recognize){
+            const resultOCR=await Tesseract.recognize(processed,"eng",{
+                logger:m=>{
+                    if(m.status==="recognizing text") showOCRStatus(`🔍 Reading document… ${Math.round((m.progress||0)*100)}%`,"warning");
+                }
+            });
+            parseDocument(resultOCR.data.text);
+            showOCRStatus("✅ Scan complete. Check the extracted details before saving.","success");
+        }else{
+            showOCRStatus("✅ Scan captured. OCR library is unavailable, so enter the document details manually.","warning");
+        }
+    }catch(error){
+        console.error("Native ID scan:",error);
+        showOCRStatus("❌ Could not process the captured document. Please try again.","danger");
+    }
+}
+
+function enhanceCapturedDocument(file){
+    return new Promise((resolve,reject)=>{
+        const img=new Image();
+        const url=URL.createObjectURL(file);
+        img.onload=()=>{
+            try{
+                const max=2400;
+                const scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+                const canvas=document.createElement("canvas");
+                canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
+                canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+                const ctx=canvas.getContext("2d",{willReadFrequently:true});
+                ctx.drawImage(img,0,0,canvas.width,canvas.height);
+                const data=ctx.getImageData(0,0,canvas.width,canvas.height);
+                const d=data.data;
+                for(let i=0;i<d.length;i+=4){
+                    const lum=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+                    const boosted=Math.max(0,Math.min(255,(lum-128)*1.16+128));
+                    d[i]=boosted; d[i+1]=boosted; d[i+2]=boosted;
+                }
+                ctx.putImageData(data,0,0);
+                canvas.toBlob(blob=>blob?resolve(blob):reject(new Error("Could not create image")),"image/jpeg",0.95);
+            }catch(e){ reject(e); }
+            finally{ URL.revokeObjectURL(url); }
+        };
+        img.onerror=()=>{ URL.revokeObjectURL(url); reject(new Error("Could not read image")); };
+        img.src=url;
+    });
+}
+
+async function cameraButtonAction(){
+    if(scannerStarted){
+        await captureIDPassportFrame();
+    }else{
+        await startLiveScanner();
+    }
+}
+
+async function startLiveScanner(){
+    const video=document.getElementById("scannerVideo");
+    const frame=document.getElementById("scannerFrame");
+    const tracking=document.getElementById("scannerTrackingText");
+    if(!video || !navigator.mediaDevices?.getUserMedia){
+        if(tracking) tracking.textContent="Camera unavailable — allow camera access";
+        showOCRStatus("Camera is unavailable. Open this page in Safari over HTTPS and allow camera access.","warning");
+        return;
+    }
+    try{
+        stopLiveScanner();
+        scannerStream=await navigator.mediaDevices.getUserMedia({
+            video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},
+            audio:false
+        });
+        video.srcObject=scannerStream;
+        await video.play();
+        scannerStarted=true;
+        frame?.classList.add("live");
+        if(tracking) tracking.textContent="Tracking document edges…";
+        startVisualTracking();
+        showOCRStatus("📄 Document scanner ready. Keep all four edges inside the guide and tap the shutter.","warning");
+    }catch(e){
+        console.error(e);
+        if(tracking) tracking.textContent="Camera access needed";
+        showOCRStatus("❌ Camera access failed. Allow camera access in iPhone settings and use HTTPS.","danger");
+    }
+}
+
+function startVisualTracking(){
+    stopVisualTracking();
+    const line=document.querySelector("#scannerFrame .scanner-line");
+    const target=document.querySelector("#scannerFrame .scanner-target");
+    const tracking=document.getElementById("scannerTrackingText");
+    let phase=0;
+    scannerTrackingTimer=setInterval(()=>{
+        if(!scannerStarted) return;
+        phase=(phase+1)%100;
+        const y=30 + Math.abs(phase-50)*0.78;
+        if(line) line.style.top=`${Math.min(69,Math.max(30,y))}%`;
+        if(target){
+            const pulse=1 + Math.sin(phase/12)*0.012;
+            target.style.transform=`scale(${pulse})`;
+        }
+        if(tracking) tracking.textContent=phase%20<10 ? "🟢 Tracking document edges…" : "🟢 Keep all edges inside the frame…";
+    },70);
+}
+
+function stopVisualTracking(){
+    if(scannerTrackingTimer){clearInterval(scannerTrackingTimer);scannerTrackingTimer=null;}
+    const target=document.querySelector("#scannerFrame .scanner-target");
+    if(target) target.style.transform="scale(1)";
+}
+
+function stopLiveScanner(){
+    stopVisualTracking();
+    if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null;}
+    scannerStarted=false;
+    const video=document.getElementById("scannerVideo");
+    if(video) video.srcObject=null;
+}
+
+function getScannerCrop(video, canvas){
+    /* Crop the same central document area shown by the scanner guide. */
+    const vw=video.videoWidth, vh=video.videoHeight;
+    const left=Math.round(vw*0.09);
+    const top=Math.round(vh*0.29);
+    const width=Math.round(vw*0.82);
+    const height=Math.round(vh*0.42);
+    return {left,top,width,height};
+}
+
+async function captureIDPassportFrame(){
+    if(!scannerStarted) return;
+    const video=document.getElementById("scannerVideo");
+    const canvas=document.getElementById("scannerCanvas");
+    const frame=document.getElementById("scannerFrame");
+    const tracking=document.getElementById("scannerTrackingText");
+    const result=document.getElementById("scannerResult");
+    const resultImg=document.getElementById("scannerResultImage");
+    const processing=document.getElementById("scannerProcessing");
+    const success=document.getElementById("scannerSuccess");
+    if(!video || !canvas || !video.videoWidth) return;
+
+    try{
+        if(processing) processing.style.display="block";
+        const crop=getScannerCrop(video,canvas);
+        canvas.width=crop.width;
+        canvas.height=crop.height;
+        const ctx=canvas.getContext("2d",{willReadFrequently:true});
+        ctx.drawImage(video,crop.left,crop.top,crop.width,crop.height,0,0,crop.width,crop.height);
+
+        /* Document-scan enhancement: light contrast + grayscale option without OCR. */
+        const img=ctx.getImageData(0,0,canvas.width,canvas.height);
+        const d=img.data;
+        for(let i=0;i<d.length;i+=4){
+            const lum=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+            const boosted=Math.max(0,Math.min(255,(lum-128)*1.18+128));
+            d[i]=Math.min(255,boosted*1.02);
+            d[i+1]=Math.min(255,boosted*1.02);
+            d[i+2]=Math.min(255,boosted*1.02);
+        }
+        ctx.putImageData(img,0,0);
+
+        const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/jpeg",0.95));
+        if(!blob) throw new Error("Could not create scanned image");
+        lastCaptureBlob=blob;
+        lastScannedBlob=blob;
+
+        const url=URL.createObjectURL(blob);
+        lastScannedDataUrl=url;
+        if(resultImg){resultImg.src=url;}
+        if(result) result.style.display="block";
+        if(frame) frame.classList.add("scanned","result-mode");
+        if(tracking) tracking.textContent="✅ Document scan captured";
+        if(success) success.style.display="block";
+
+        stopLiveScanner();
+        if(processing) processing.style.display="none";
+        showOCRStatus("✅ Scan ready. Save the image to Photos or create a PDF.","success");
+    }catch(e){
+        console.error("Document scan:",e);
+        if(processing) processing.style.display="none";
+        showOCRStatus("❌ Could not create the document scan. Please try again.","danger");
+    }
+}
+
+function retakeDocumentScan(){
+    lastScannedBlob=null;
+    lastScannedDataUrl=null;
+    const result=document.getElementById("scannerResult");
+    const frame=document.getElementById("scannerFrame");
+    const success=document.getElementById("scannerSuccess");
+    const tracking=document.getElementById("scannerTrackingText");
+    if(result) result.style.display="none";
+    if(success) success.style.display="none";
+    if(frame) frame.classList.remove("scanned","result-mode");
+    if(tracking) tracking.textContent="Starting camera…";
+    setTimeout(()=>startLiveScanner(),100);
+}
+
+async function saveScannedImageToPhotos(){
+    if(!lastScannedBlob) return;
+    const file=new File([lastScannedBlob],`ID-Passport-Scan-${new Date().toISOString().replace(/[:.]/g,"-")}.jpg`,{type:"image/jpeg"});
+    if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+        try{
+            await navigator.share({files:[file],title:"ID / Passport scan",text:"Choose Save Image to store the scanned document in Photos."});
+            return;
+        }catch(e){ if(e?.name === "AbortError") return; }
+    }
+    const url=URL.createObjectURL(lastScannedBlob);
+    const a=document.createElement("a"); a.href=url; a.download=file.name; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+}
+
+async function saveScannedDocumentPDF(){
+    if(!lastScannedBlob) return;
+    try{
+        if(!window.jspdf?.jsPDF){
+            showOCRStatus("PDF engine is not available. Please reload the page and try again.","danger");
+            return;
+        }
+        showOCRStatus("📄 Creating PDF…","warning");
+        const dataUrl=await blobToDataURL(lastScannedBlob);
+        const imageSize=await getImageSize(dataUrl);
+        const landscape=imageSize.width>imageSize.height;
+        const pdf=new window.jspdf.jsPDF({orientation:landscape?"landscape":"portrait",unit:"mm",format:"a4"});
+        const pageW=landscape?297:210, pageH=landscape?210:297;
+        const margin=10;
+        const scale=Math.min((pageW-margin*2)/imageSize.width,(pageH-margin*2)/imageSize.height);
+        const w=imageSize.width*scale, h=imageSize.height*scale;
+        pdf.addImage(dataUrl,"JPEG",(pageW-w)/2,(pageH-h)/2,w,h,"SCAN","FAST");
+        const filename=`ID-Passport-Scan-${new Date().toISOString().replace(/[:.]/g,"-")}.pdf`;
+        const pdfBlob=pdf.output("blob");
+        const file=new File([pdfBlob],filename,{type:"application/pdf"});
+        if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+            await navigator.share({files:[file],title:"ID / Passport PDF scan",text:"Save this scanned document as a PDF."});
+        }else{
+            pdf.save(filename);
+        }
+        showOCRStatus("✅ PDF scan created.","success");
+    }catch(e){
+        console.error("PDF scan:",e);
+        showOCRStatus("❌ Could not create the PDF. Please try again.","danger");
+    }
+}
+
+function blobToDataURL(blob){
+    return new Promise((resolve,reject)=>{
+        const reader=new FileReader();
+        reader.onload=()=>resolve(reader.result);
+        reader.onerror=reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+function getImageSize(dataUrl){
+    return new Promise((resolve,reject)=>{
+        const img=new Image();
+        img.onload=()=>resolve({width:img.naturalWidth,height:img.naturalHeight});
+        img.onerror=reject;
+        img.src=dataUrl;
+    });
+}
+
+async function handleIDPhoto(
+    event
+){
+
+    const file =
+        event.target.files[0];
+
+
+    if(!file){
+
+        return;
+
+    }
+
+
+    const preview =
+        document.getElementById(
+            "idPreview"
+        );
+
+
+    preview.src =
+        URL.createObjectURL(
+            file
+        );
+
+
+    preview.style.display =
+        "block";
+
+
+    showOCRStatus(
+        "📷 Photo received. Preparing OCR...",
+        "warning"
+    );
+
+
+    try{
+
+        showOCRStatus(
+            "🔍 Reading ID / Passport...",
+            "warning"
+        );
+
+
+        const result =
+            await Tesseract.recognize(
+                file,
+                "eng",
+                {
+
+                    logger:
+                        message=>{
+
+                            if(
+                                message.status ===
+                                "recognizing text"
+                            ){
+
+                                const percent =
+                                    Math.round(
+                                        (
+                                            message.progress ||
+                                            0
+                                        ) *
+                                        100
+                                    );
+
+
+                                showOCRStatus(
+
+                                    `🔍 Reading document... ${percent}%`,
+
+                                    "warning"
+
+                                );
+
+                            }
+
+                        }
+
+                }
+            );
+
+
+        const text =
+            result.data.text;
+
+
+        console.log(
+            "OCR TEXT:",
+            text
+        );
+
+
+        parseDocument(
+            text
+        );
+
+        showOCRStatus(
+            "📄 Photo captured. Document details may be filled from OCR, but the scanner does not auto-accept recognition.",
+            "success"
+        );
+
+
+    }catch(error){
+
+        console.error(
+            error
+        );
+
+
+        showOCRStatus(
+            "❌ Could not read the document. Please enter the information manually.",
+            "danger"
+        );
+
+    }
+
+}
+
+
+function documentRecognitionIsGood(){
+
+    const type = document.getElementById("documentType")?.value || "";
+    const number = (document.getElementById("documentNumber")?.value || "").trim();
+    const name = (document.getElementById("idName")?.value || "").trim();
+
+    /* Require a document type plus a strong identifier.
+       This avoids accepting a random photo with weak OCR text. */
+    return (
+        (type === "Passport" || type === "ID Card") &&
+        (number.length >= 4 || name.length >= 5)
+    );
+}
+
+
+function showOCRStatus(
+    text,
+    type
+){
+
+    const box =
+        document.getElementById(
+            "ocrStatus"
+        );
+
+
+    box.textContent =
+        text;
+
+
+    box.className =
+        "status " +
+        type;
+
+
+    box.style.display =
+        "block";
+
+}
+
+
+function cleanOCRText(
+    text
+){
+
+    return text
+        .replace(
+            /\r/g,
+            ""
+        )
+        .replace(
+            /[|]/g,
+            "I"
+        )
+        .replace(
+            / +/g,
+            " "
+        )
+        .trim();
+
+}
+
+
+function parseDocument(
+    rawText
+){
+
+    const text =
+        cleanOCRText(
+            rawText
+        );
+
+
+    const lines =
+        text
+        .split("\n")
+        .map(
+            line=>line.trim()
+        )
+        .filter(
+            line=>line.length > 0
+        );
+
+
+    const mrz =
+        findMRZ(
+            lines
+        );
+
+
+    if(mrz){
+
+        document.getElementById(
+            "documentType"
+        ).value =
+            "Passport";
+
+
+        parseMRZ(
+            mrz
+        );
+
+
+        return;
+
+    }
+
+
+    document.getElementById(
+        "documentType"
+    ).value =
+        "ID Card";
+
+
+    parseGenericID(
+        lines
+    );
+
+}
+
+
+function findMRZ(
+    lines
+){
+
+    const candidates =
+        lines.filter(
+            line=>{
+
+                const clean =
+                    line
+                    .replace(
+                        / /g,
+                        ""
+                    )
+                    .toUpperCase();
+
+
+                return (
+
+                    clean.length >= 25 &&
+
+                    (
+
+                        clean.includes("<") ||
+
+                        /^[A-Z0-9<]+$/
+                            .test(
+                                clean
+                            )
+
+                    )
+
+                );
+
+            }
+        );
+
+
+    if(
+        candidates.length >= 2
+    ){
+
+        return candidates.slice(
+            -2
+        );
+
+    }
+
+
+    return null;
+
+}
+
+
+function parseMRZ(
+    mrzLines
+){
+
+    let line1 =
+        mrzLines[0]
+        .replace(
+            / /g,
+            ""
+        )
+        .toUpperCase();
+
+
+    let line2 =
+        mrzLines[1]
+        .replace(
+            / /g,
+            ""
+        )
+        .toUpperCase();
+
+
+    const documentNumber =
+        line2
+        .substring(
+            0,
+            9
+        )
+        .replace(
+            /</g,
+            ""
+        );
+
+
+    document.getElementById(
+        "documentNumber"
+    ).value =
+        documentNumber;
+
+
+    const nationality =
+        line2.substring(
+            10,
+            13
+        );
+
+
+    document.getElementById(
+        "nationality"
+    ).value =
+        nationality;
+
+
+    const dob =
+        line2.substring(
+            13,
+            19
+        );
+
+
+    document.getElementById(
+        "dateOfBirth"
+    ).value =
+        formatMRZDate(
+            dob
+        );
+
+
+    const expiry =
+        line2.substring(
+            21,
+            27
+        );
+
+
+    document.getElementById(
+        "expiryDate"
+    ).value =
+        formatMRZDate(
+            expiry
+        );
+
+
+    if(
+        line1.length > 5
+    ){
+
+        const namePart =
+            line1.substring(
+                5
+            );
+
+
+        const parts =
+            namePart
+            .split(
+                "<<"
+            );
+
+
+        const surname =
+            (
+                parts[0] ||
+                ""
+            )
+            .replace(
+                /</g,
+                " "
+            )
+            .trim();
+
+
+        const given =
+            (
+                parts[1] ||
+                ""
+            )
+            .replace(
+                /</g,
+                " "
+            )
+            .trim();
+
+
+        document.getElementById(
+            "idName"
+        ).value =
+            (
+                surname +
+                " " +
+                given
+            )
+            .trim();
+
+    }
+
+}
+
+
+function formatMRZDate(
+    value
+){
+
+    if(
+        !value ||
+        value.length !== 6
+    ){
+
+        return "";
+
+    }
+
+
+    const year =
+        Number(
+            value.substring(
+                0,
+                2
+            )
+        );
+
+
+    const currentYear =
+        new Date()
+        .getFullYear()
+        % 100;
+
+
+    const fullYear =
+        year <= currentYear
+        ?
+        2000 + year
+        :
+        1900 + year;
+
+
+    return (
+        value.substring(
+            4,
+            6
+        ) +
+        "/" +
+        value.substring(
+            2,
+            4
+        ) +
+        "/" +
+        fullYear
+    );
+
+}
+
+
+function parseGenericID(
+    lines
+){
+
+    const joined =
+        lines.join(
+            " "
+        );
+
+
+    const numberMatch =
+        joined.match(
+            /\b[A-Z0-9]{6,15}\b/
+        );
+
+
+    if(
+        numberMatch
+    ){
+
+        document.getElementById(
+            "documentNumber"
+        ).value =
+            numberMatch[0];
+
+    }
+
+
+    if(
+        lines.length > 0
+    ){
+
+        document.getElementById(
+            "idName"
+        ).value =
+            lines[0];
+
+    }
+
+}
+
+
+/* ============================================================
+   INITIALIZE
+============================================================ */
+
+loadRoomStatus();
+
+cleanExpiredRooms();
+
+renderRoomSelection();
+
+updateCheckout();
+
+</script>
+
+</body>
+</html>
